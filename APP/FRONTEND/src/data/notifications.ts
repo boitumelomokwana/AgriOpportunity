@@ -1,0 +1,34 @@
+import type { AppNotification } from '@/types';
+
+export const mockNotifications: AppNotification[] = [
+  {
+    id: 'n1',
+    title: '3 new opportunities match your profile',
+    body: 'Including a graduate data programme in Gauteng.',
+    time: '08:30',
+    group: 'Today',
+    unread: true,
+    icon: 'star',
+    target: '/matches',
+  },
+  {
+    id: 'n2',
+    title: 'Closing in 4 days',
+    body: 'Solar Technician Learnership is closing soon.',
+    time: '07:15',
+    group: 'Today',
+    unread: true,
+    icon: 'clock',
+    target: '/opportunity/3',
+  },
+  {
+    id: 'n3',
+    title: 'Saved opportunity updated',
+    body: 'The required documents were updated.',
+    time: 'Yesterday',
+    group: 'Yesterday',
+    unread: false,
+    icon: 'bookmark',
+    target: '/saved',
+  },
+];
