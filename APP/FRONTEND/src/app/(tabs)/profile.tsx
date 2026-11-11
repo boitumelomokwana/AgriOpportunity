@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -34,7 +34,7 @@ const careerFieldOptions = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, profile, updateProfile, signOut, showToast } = useApp();
+  const { isAuthenticated, isAdmin, profile, updateProfile, signOut, showToast } = useApp();
 
   if (!isAuthenticated) {
     return (
@@ -90,7 +90,8 @@ export default function ProfileScreen() {
         }
       />
 
-      <View style={styles.identityCard}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.identityCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{profile.initials}</Text>
         </View>
@@ -125,9 +126,10 @@ export default function ProfileScreen() {
         <FormField
           label="Email"
           value={profile.email}
-          onChangeText={(email) => updateProfile({ email })}
           placeholder="you@example.com"
           keyboardType="email-address"
+          editable={false}
+          hint="Email is your sign-in address and cannot be changed here."
         />
         <FormField
           label="Phone"
@@ -297,12 +299,14 @@ export default function ProfileScreen() {
           body="Notifications and app information"
           onPress={() => router.push('/settings')}
         />
-        <LinkRow
-          icon="shield"
-          title="Administrator demo"
-          body="Illustrative admin area with local mock data"
-          onPress={() => router.push('/admin')}
-        />
+        {isAdmin ? (
+          <LinkRow
+            icon="shield"
+            title="Admin area"
+            body="Create, edit and publish opportunity listings"
+            onPress={() => router.push('/admin')}
+          />
+        ) : null}
       </View>
 
       <Pressable
@@ -317,6 +321,7 @@ export default function ProfileScreen() {
         <Feather name="log-out" size={17} color={colors.red700} />
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -368,6 +373,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.surfaceSoft,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxxl,
   },
   emptyWrap: {
     flex: 1,

@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { AppHeader } from '@/components/AppHeader';
+import { EmptyState } from '@/components/EmptyState';
 import { Toggle } from '@/components/Toggle';
 import { Brand } from '@/components/Brand';
 import { colors, radius, spacing, type } from '@/constants/theme';
@@ -33,102 +34,130 @@ function SettingRow({
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { profile, updateProfile, showToast } = useApp();
+  const { isAuthenticated, isAdmin, profile, updateProfile, signOut, showToast } = useApp();
   const prefs = profile.notificationPreferences;
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader
+          title="Settings"
+          subtitle="Sign in to manage your preferences"
+          onBack={() => router.back()}
+        />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="settings"
+            title="Sign in to change settings"
+            message="Notification preferences are stored with your NextStep SA account."
+            actionLabel="Sign in"
+            onAction={() => router.push('/auth')}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Settings"
-        subtitle="Local demo preferences"
+        subtitle="Notifications and app information"
         onBack={() => router.back()}
       />
 
-      <View style={styles.brandRow}>
-        <Brand />
-        <Text style={styles.version}>NextStep SA · demo build</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.brandRow}>
+          <Brand />
+          <Text style={styles.version}>NextStep SA · connected to the API</Text>
+        </View>
 
-      <View style={styles.card}>
-        <SettingRow
-          label="Closing date reminders"
-          body="Alert me in the week before listed closing dates."
-          value={prefs.closingDates}
-          onValueChange={(closingDates) =>
-            updateProfile({ notificationPreferences: { ...prefs, closingDates } })
-          }
-        />
-        <SettingRow
-          label="New matches"
-          body="Tell me when new illustrative matches arrive."
-          value={prefs.newMatches}
-          onValueChange={(newMatches) =>
-            updateProfile({ notificationPreferences: { ...prefs, newMatches } })
-          }
-        />
-        <SettingRow
-          label="Saved opportunity updates"
-          body="Notify me when saved demo listings change."
-          value={prefs.savedUpdates}
-          onValueChange={(savedUpdates) =>
-            updateProfile({ notificationPreferences: { ...prefs, savedUpdates } })
-          }
-        />
-      </View>
+        <View style={styles.card}>
+          <SettingRow
+            label="Closing date reminders"
+            body="Alert me in the week before listed closing dates."
+            value={prefs.closingDates}
+            onValueChange={(closingDates) =>
+              updateProfile({ notificationPreferences: { ...prefs, closingDates } })
+            }
+          />
+          <SettingRow
+            label="New matches"
+            body="Tell me when new matching opportunities are added."
+            value={prefs.newMatches}
+            onValueChange={(newMatches) =>
+              updateProfile({ notificationPreferences: { ...prefs, newMatches } })
+            }
+          />
+          <SettingRow
+            label="Saved opportunity updates"
+            body="Notify me when saved listings change."
+            value={prefs.savedUpdates}
+            onValueChange={(savedUpdates) =>
+              updateProfile({ notificationPreferences: { ...prefs, savedUpdates } })
+            }
+          />
+        </View>
 
-      <View style={styles.linkList}>
+        <View style={styles.linkList}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          >
+            <View style={styles.linkIcon}>
+              <Feather name="user" size={17} color={colors.teal700} />
+            </View>
+            <View style={styles.linkCopy}>
+              <Text style={styles.linkTitle}>Edit profile & alert types</Text>
+              <Text style={styles.linkBody}>
+                Change opportunity types and personal details
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={19} color={colors.muted} />
+          </Pressable>
+          {isAdmin ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/admin')}
+              style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+            >
+              <View style={styles.linkIcon}>
+                <Feather name="shield" size={17} color={colors.teal700} />
+              </View>
+              <View style={styles.linkCopy}>
+                <Text style={styles.linkTitle}>Admin area</Text>
+                <Text style={styles.linkBody}>Create, edit and publish listings</Text>
+              </View>
+              <Feather name="chevron-right" size={19} color={colors.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        <View style={styles.noticeCard}>
+          <Feather name="info" size={16} color={colors.teal700} />
+          <Text style={styles.noticeText}>
+            Your profile and notification preferences are saved to your NextStep SA
+            account. Opportunity records come from the backend SQLite database;
+            seeded listings are illustrative demo data, not verified vacancies.
+          </Text>
+        </View>
+
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/profile')}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
+          onPress={() => {
+            void signOut()
+              .then(() => router.replace('/'))
+              .catch((error: unknown) => {
+                showToast(error instanceof Error ? error.message : 'Unable to sign out.');
+              });
+          }}
+          style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
         >
-          <View style={styles.linkIcon}>
-            <Feather name="user" size={17} color={colors.teal700} />
-          </View>
-          <View style={styles.linkCopy}>
-            <Text style={styles.linkTitle}>Edit profile & alert types</Text>
-            <Text style={styles.linkBody}>
-              Change opportunity types and personal details
-            </Text>
-          </View>
-          <Feather name="chevron-right" size={19} color={colors.muted} />
+          <Feather name="log-out" size={17} color={colors.red700} />
+          <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push('/admin')}
-          style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
-        >
-          <View style={styles.linkIcon}>
-            <Feather name="shield" size={17} color={colors.teal700} />
-          </View>
-          <View style={styles.linkCopy}>
-            <Text style={styles.linkTitle}>Administrator demo</Text>
-            <Text style={styles.linkBody}>Illustrative moderation area (mock data)</Text>
-          </View>
-          <Feather name="chevron-right" size={19} color={colors.muted} />
-        </Pressable>
-      </View>
-
-      <View style={styles.noticeCard}>
-        <Feather name="info" size={16} color={colors.teal700} />
-        <Text style={styles.noticeText}>
-          This is a frontend demonstration of NextStep SA. No backend, account
-          creation or real notifications are used. Everything you change stays
-          in memory until the app is closed.
-        </Text>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => {
-          showToast('Demo mode: state resets when the app closes');
-          router.replace('/');
-        }}
-        style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
-      >
-        <Feather name="log-out" size={17} color={colors.red700} />
-        <Text style={styles.signOutText}>Return to welcome screen</Text>
-      </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -138,9 +167,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surfaceSoft,
   },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
   brandRow: {
     marginTop: spacing.lg,
-    marginHorizontal: spacing.xl,
     gap: spacing.xs,
   },
   version: {
@@ -148,7 +186,6 @@ const styles = StyleSheet.create({
   },
   card: {
     marginTop: spacing.lg,
-    marginHorizontal: spacing.xl,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
@@ -174,7 +211,6 @@ const styles = StyleSheet.create({
   },
   linkList: {
     marginTop: spacing.xl,
-    marginHorizontal: spacing.xl,
     gap: spacing.md,
   },
   linkRow: {
@@ -207,7 +243,6 @@ const styles = StyleSheet.create({
   },
   noticeCard: {
     marginTop: spacing.xxl,
-    marginHorizontal: spacing.xl,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
@@ -224,8 +259,6 @@ const styles = StyleSheet.create({
   },
   signOut: {
     marginTop: spacing.xxxl,
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.xxxl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

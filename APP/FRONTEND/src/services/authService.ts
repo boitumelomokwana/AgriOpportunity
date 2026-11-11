@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
-import type { UserProfile } from '@/types';
-import { apiRequest, setAccessToken } from './api';
+import type { AuthUser, UserProfile } from '@/types';
+import { ApiError, apiRequest, setAccessToken } from './api';
 
 const tokenStorageKey = 'agri-opportunity-access-token';
 
@@ -31,19 +31,30 @@ async function clearStoredToken() {
 interface AuthResponse {
   token: string;
   profile: UserProfile;
-  user: { id: string; email: string; role: 'user' | 'admin' };
+  user: AuthUser;
 }
 
-async function saveSession(response: AuthResponse) {
+interface MeResponse {
+  user: AuthUser;
+  profile: UserProfile;
+}
+
+export interface AuthResult {
+  user: AuthUser;
+  profile: UserProfile;
+}
+
+async function saveSession(response: AuthResponse): Promise<AuthResult> {
   await storeToken(response.token);
   setAccessToken(response.token);
-  return response.profile;
+  return { user: response.user, profile: response.profile };
 }
 
-export async function signIn(email: string, password: string): Promise<UserProfile> {
+export async function signIn(email: string, password: string): Promise<AuthResult> {
   const response = await apiRequest<AuthResponse>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
+    skipUnauthorizedHandler: true,
   });
   return saveSession(response);
 }
@@ -52,26 +63,32 @@ export async function register(
   name: string,
   email: string,
   password: string,
-): Promise<UserProfile> {
+): Promise<AuthResult> {
   const response = await apiRequest<AuthResponse>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
+    skipUnauthorizedHandler: true,
   });
   return saveSession(response);
 }
 
-export async function restoreSession(): Promise<boolean> {
+/**
+ * Restores a stored bearer token. Returns the authenticated account when the
+ * token is still valid, or null after clearing invalid credentials.
+ */
+export async function restoreSession(): Promise<AuthResult | null> {
   const token = await getStoredToken();
-  if (!token) return false;
+  if (!token) return null;
   setAccessToken(token);
   try {
-    await apiRequest('/me');
-    return true;
+    const response = await apiRequest<MeResponse>('/me', { skipUnauthorizedHandler: true });
+    return { user: response.user, profile: response.profile };
   } catch (error) {
-    if (error instanceof Error && error.message.includes('Could not connect')) throw error;
+    // Keep the token when the API is simply unreachable so the user can retry.
+    if (error instanceof ApiError && error.status === 0) throw error;
     setAccessToken(null);
     await clearStoredToken();
-    return false;
+    return null;
   }
 }
 

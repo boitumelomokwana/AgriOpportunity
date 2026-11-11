@@ -306,9 +306,14 @@ app.patch('/api/me/notifications/:id/read', requireAuth, (req, res) => {
 });
 
 app.get('/api/admin/opportunities', requireAuth, requireAdmin, (_req, res) => {
-  const rows = db.prepare('SELECT data_json FROM opportunities ORDER BY id').all() as
-    { data_json: string }[];
-  res.json(rows.map((row) => parseJson<Opportunity>(row.data_json)));
+  const rows = db.prepare('SELECT data_json, published FROM opportunities ORDER BY id').all() as
+    { data_json: string; published: number }[];
+  res.json(
+    rows.map((row) => ({
+      ...parseJson<Opportunity>(row.data_json),
+      published: row.published === 1,
+    })),
+  );
 });
 
 const listingSchema = z.object({
@@ -334,6 +339,7 @@ const listingSchema = z.object({
   sourceUrl: z.string().url(),
   lastUpdated: z.string(),
   isExpired: z.boolean().optional(),
+  published: z.boolean().optional(),
 });
 
 app.put('/api/admin/opportunities/:id', requireAuth, requireAdmin, (req, res) => {
@@ -342,11 +348,12 @@ app.put('/api/admin/opportunities/:id', requireAuth, requireAdmin, (req, res) =>
     res.status(400).json({ error: 'Invalid opportunity listing.', details: parsed.error.flatten() });
     return;
   }
+  const { published = true, ...opportunity } = parsed.data;
   db.prepare(`
-    INSERT INTO opportunities (id, data_json, published) VALUES (?, ?, 1)
-    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json
-  `).run(parsed.data.id, JSON.stringify(parsed.data));
-  res.json(parsed.data);
+    INSERT INTO opportunities (id, data_json, published) VALUES (?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json, published = excluded.published
+  `).run(opportunity.id, JSON.stringify(opportunity), published ? 1 : 0);
+  res.json({ ...opportunity, published });
 });
 
 app.delete('/api/admin/opportunities/:id', requireAuth, requireAdmin, (req, res) => {

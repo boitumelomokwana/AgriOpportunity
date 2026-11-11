@@ -1,6 +1,6 @@
 # Agri Opportunity API
 
-Local-first REST API for the NextStep SA Expo app. It uses TypeScript, Express, SQLite, bcrypt password hashing, and short-lived bearer authentication tokens. Opportunity records are publicly readable; profile, saved items, application tracking, and notifications require an account. Admin routes require a user whose database role is `admin`.
+Local-first REST API for the NextStep SA Expo app. It uses TypeScript, Express, SQLite, bcrypt password hashing, and 7-day bearer authentication tokens. Opportunity records are publicly readable; profile, saved items, application tracking, and notifications require an account. Admin routes require a user whose database role is `admin`.
 
 The initial opportunity rows are illustrative demo data. They are not verified real vacancies.
 
@@ -25,13 +25,20 @@ The SQLite database is created at `data/agri-opportunity.sqlite`.
 
 ## Connect the Expo app
 
-Set `EXPO_PUBLIC_API_URL` in `APP\FRONTEND\.env` to the API base URL ending in `/api`. For example:
+Set `EXPO_PUBLIC_API_URL` in `APP\FRONTEND\.env` to the API base URL ending in `/api`. Examples:
 
 ```text
+# Android emulator (10.0.2.2 is the host machine)
+EXPO_PUBLIC_API_URL=http://10.0.2.2:3000/api
+
+# Physical Android device on the same network
+EXPO_PUBLIC_API_URL=http://192.168.1.20:3000/api
+
+# iOS simulator or Expo web on this computer
 EXPO_PUBLIC_API_URL=http://localhost:3000/api
 ```
 
-For a physical phone, use the computer's LAN IP address instead of `localhost` and ensure both devices can reach each other. Restart Expo after changing the variable. Use HTTPS and a restricted `CORS_ORIGINS` value for hosted deployments.
+For a physical phone, use the computer's LAN IP address instead of `localhost` and ensure both devices can reach each other. Restart Expo after changing the variable. Use HTTPS and a restricted `CORS_ORIGINS` value for hosted deployments. Never put `JWT_SECRET` or other backend secrets in `EXPO_PUBLIC_*` variables; they are embedded in the client bundle.
 
 ## Routes
 
@@ -56,6 +63,8 @@ For a physical phone, use the computer's LAN IP address instead of `localhost` a
 | PUT, DELETE | `/api/admin/opportunities/:id` | Admin |
 
 Auth routes are rate limited. Registration requires a password of at least 8 characters. Admin access is not self-assigned; set a trusted account's `users.role` to `admin` using a controlled database administration process. Never expose the SQLite file or database credentials publicly.
+
+`GET /api/admin/opportunities` returns every record, including drafts, with a `published` boolean. `PUT /api/admin/opportunities/:id` creates or replaces a listing and accepts an optional `published` boolean; it defaults to `true` when omitted. Only records with `published = 1` appear in the public opportunity routes. `DELETE` removes the record.
 
 ## Checks
 

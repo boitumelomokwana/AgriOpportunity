@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -60,51 +60,53 @@ export default function AlertsScreen() {
           />
         </View>
       ) : (
-        groups.map((group) => {
-          const items = updateGroup(group);
-          if (items.length === 0) return null;
-          return (
-            <View key={group}>
-              <SectionHeader title={group} />
-              <View style={styles.list}>
-                {items.map((notification) => (
-                  <Pressable
-                    key={notification.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ checked: !notification.unread }}
-                    onPress={() => pressNotification(notification)}
-                    style={({ pressed }) => [
-                      styles.card,
-                      notification.unread && styles.cardUnread,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.iconWrap,
-                        notification.unread ? styles.iconWrapUnread : styles.iconWrapRead,
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {groups.map((group) => {
+            const items = updateGroup(group);
+            if (items.length === 0) return null;
+            return (
+              <View key={group}>
+                <SectionHeader title={group} />
+                <View style={styles.list}>
+                  {items.map((notification) => (
+                    <Pressable
+                      key={notification.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ checked: !notification.unread }}
+                      onPress={() => pressNotification(notification)}
+                      style={({ pressed }) => [
+                        styles.card,
+                        notification.unread && styles.cardUnread,
+                        pressed && styles.pressed,
                       ]}
                     >
-                      <Feather
-                        name={notification.icon}
-                        size={17}
-                        color={notification.unread ? colors.teal700 : colors.muted}
-                      />
-                    </View>
-                    <View style={styles.copy}>
-                      <Text style={[styles.title, notification.unread && styles.titleUnread]}>
-                        {notification.title}
-                      </Text>
-                      <Text style={styles.body}>{notification.body}</Text>
-                    </View>
-                    <Text style={styles.time}>{notification.time}</Text>
-                    {notification.unread ? <View style={styles.dot} /> : null}
-                  </Pressable>
-                ))}
+                      <View
+                        style={[
+                          styles.iconWrap,
+                          notification.unread ? styles.iconWrapUnread : styles.iconWrapRead,
+                        ]}
+                      >
+                        <Feather
+                          name={notification.icon}
+                          size={17}
+                          color={notification.unread ? colors.teal700 : colors.muted}
+                        />
+                      </View>
+                      <View style={styles.copy}>
+                        <Text style={[styles.title, notification.unread && styles.titleUnread]}>
+                          {notification.title}
+                        </Text>
+                        <Text style={styles.body}>{notification.body}</Text>
+                      </View>
+                      <Text style={styles.time}>{notification.time}</Text>
+                      {notification.unread ? <View style={styles.dot} /> : null}
+                    </Pressable>
+                  ))}
+                </View>
               </View>
-            </View>
-          );
-        })
+            );
+          })}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -130,9 +132,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
   list: {
     gap: spacing.md,
-    paddingHorizontal: spacing.xl,
   },
   card: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -17,7 +17,7 @@ const statusHints: Record<ApplicationStatus, string> = {
   Preparing: 'You are gathering documents or drafting responses.',
   Applied: 'You marked that you applied through the official channel.',
   Interview: 'An interview or selection stage is under way.',
-  Outcome: 'A decision has been recorded for this demo entry.',
+  Outcome: 'A decision has been recorded.',
 };
 
 export default function ApplicationsScreen() {
@@ -27,7 +27,6 @@ export default function ApplicationsScreen() {
     applications,
     opportunities,
     updateApplicationStatus,
-    showToast,
   } = useApp();
 
   if (!isAuthenticated) {
@@ -77,7 +76,10 @@ export default function ApplicationsScreen() {
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {records.map(({ application, opportunity }) => (
             <View key={application.id} style={styles.card}>
               <Pressable
@@ -102,8 +104,6 @@ export default function ApplicationsScreen() {
                     active={application.status === status}
                     onPress={() => {
                       updateApplicationStatus(application.id, status);
-                      // No data leaves the device in this demo.
-                      showToast(`Marked as ${status.toLowerCase()} (demo)`);
                     }}
                   />
                 ))}
@@ -112,7 +112,7 @@ export default function ApplicationsScreen() {
               <Text style={styles.statusHint}>{statusHints[application.status]}</Text>
             </View>
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );

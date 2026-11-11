@@ -71,7 +71,7 @@ export default function WelcomeScreen() {
             title="Explore opportunities first"
             variant="secondary"
             fullWidth
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/(tabs)/home')}
           />
           <Text style={styles.demoNote}>
             Demo app · uses illustrative sample data only

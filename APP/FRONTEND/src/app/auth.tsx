@@ -61,7 +61,7 @@ export default function AuthScreen() {
       } else {
         await register(form.name.trim(), form.email.trim(), form.password);
       }
-      await router.replace('/(tabs)');
+      await router.replace('/(tabs)/home');
       showToast(mode === 'login' ? 'Signed in' : 'Account created');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Unable to authenticate.');
