@@ -1,6 +1,13 @@
 import { useMemo } from 'react';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -21,6 +28,7 @@ export default function ExploreScreen() {
   const router = useRouter();
   const {
     opportunities,
+    opportunitiesLoading,
     opportunitiesError,
     reloadOpportunities,
     exploreFilters,
@@ -118,8 +126,17 @@ export default function ExploreScreen() {
         <Text style={styles.resultCount}>
           {results.length} {pluralise(results.length, 'opportunity')} open
         </Text>
+        <Text style={styles.demoNote}>
+          These listings are illustrative demo data, not verified vacancies.
+          Always confirm details on the official source.
+        </Text>
 
-        {opportunitiesError ? (
+        {opportunitiesLoading && opportunities.length === 0 ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={colors.teal700} />
+            <Text style={styles.loadingText}>Loading opportunities…</Text>
+          </View>
+        ) : opportunitiesError ? (
           <EmptyState
             icon="alert-triangle"
             title="Something went wrong"
@@ -255,6 +272,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     fontFamily: fonts.medium,
     fontSize: 12,
+    color: colors.muted,
+  },
+  demoNote: {
+    ...type.caption,
+    marginBottom: spacing.md,
+    color: colors.amber700,
+  },
+  loadingWrap: {
+    paddingVertical: spacing.xxxl,
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...type.small,
     color: colors.muted,
   },
   cardList: {

@@ -9,18 +9,22 @@ import {
   type ReactNode,
 } from 'react';
 
-import { mockApplications } from '@/data/applications';
-import { adminAttentionThresholdDays, mockAdminListings, mockAdminSummary } from '@/data/admin';
-import { mockNotifications } from '@/data/notifications';
 import { mockProfile } from '@/data/profile';
+import { authService } from '@/services/authService';
+import { adminService } from '@/services/adminService';
 import { applicationService } from '@/services/applicationService';
+import { setUnauthorizedHandler } from '@/services/api';
 import { defaultFilters, opportunityService } from '@/services/opportunityService';
+import { notificationService } from '@/services/notificationService';
+import { profileService } from '@/services/profileService';
+import { savedService } from '@/services/savedService';
 import type {
   AdminListing,
   AdminSummary,
   AppNotification,
   ApplicationRecord,
   ApplicationStatus,
+  AuthUser,
   Opportunity,
   OpportunityFilters,
   UserProfile,
@@ -33,6 +37,13 @@ interface ToastState {
 }
 
 interface AppContextValue {
+  isAuthenticated: boolean;
+  authReady: boolean;
+  user: AuthUser | null;
+  isAdmin: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
   opportunities: Opportunity[];
   opportunitiesLoading: boolean;
   opportunitiesError: string | null;
@@ -53,8 +64,12 @@ interface AppContextValue {
   adminListings: AdminListing[];
   adminSummary: AdminSummary;
   adminAttention: AdminListing[];
-  saveAdminListing: (listing: AdminListing, mode: 'draft' | 'publish') => void;
-  markSourceChecked: (id: string) => void;
+  adminLoading: boolean;
+  adminError: string | null;
+  refreshAdmin: () => Promise<void>;
+  saveAdminListing: (listing: AdminListing, mode: 'draft' | 'publish') => Promise<boolean>;
+  markSourceChecked: (id: string) => Promise<void>;
+  deleteAdminListing: (id: string) => Promise<boolean>;
   exploreFilters: OpportunityFilters;
   setExploreFilters: (filters: OpportunityFilters) => void;
   resetExploreFilters: () => void;
@@ -62,22 +77,34 @@ interface AppContextValue {
   showToast: (message: string) => void;
 }
 
+const adminAttentionThresholdDays = 30;
+
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
   const [opportunitiesError, setOpportunitiesError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile>(mockProfile);
-  const [savedIds, setSavedIds] = useState<string[]>(['1', '3', '4']);
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
-  const [applications, setApplications] = useState<ApplicationRecord[]>(mockApplications);
-  const [adminListings, setAdminListings] = useState<AdminListing[]>(mockAdminListings);
-  const [adminSummary, setAdminSummary] = useState<AdminSummary>(mockAdminSummary);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [adminListings, setAdminListings] = useState<AdminListing[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
   const [exploreFilters, setExploreFiltersState] =
     useState<OpportunityFilters>(defaultFilters);
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistedProfile = useRef<UserProfile>(mockProfile);
+  const profileRef = useRef(profile);
+  const profileSyncQueue = useRef<Promise<unknown>>(Promise.resolve());
+  profileRef.current = profile;
+
+  const isAdmin = user?.role === 'admin';
 
   const loadOpportunities = useCallback(async () => {
     setOpportunitiesLoading(true);
@@ -111,17 +138,112 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastTimer.current = setTimeout(() => setToast(null), 2800);
   }, []);
 
+  const loadAccountData = useCallback(async (profileOverride?: UserProfile) => {
+    const [nextProfile, nextSavedIds, nextNotifications, nextApplications] =
+      await Promise.all([
+        profileOverride ? Promise.resolve(profileOverride) : profileService.getProfile(),
+        savedService.getSavedIds(),
+        notificationService.getNotifications(),
+        applicationService.getApplications(),
+      ]);
+    persistedProfile.current = nextProfile;
+    setProfile(nextProfile);
+    setSavedIds(nextSavedIds);
+    setNotifications(nextNotifications);
+    setApplications(nextApplications);
+  }, []);
+
+  const resetAccountState = useCallback(() => {
+    persistedProfile.current = mockProfile;
+    setIsAuthenticated(false);
+    setUser(null);
+    setProfile(mockProfile);
+    setSavedIds([]);
+    setNotifications([]);
+    setApplications([]);
+    setAdminListings([]);
+    setAdminError(null);
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      void authService.signOut();
+      resetAccountState();
+      showToast('Your session expired. Please sign in again.');
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [resetAccountState, showToast]);
+
+  useEffect(() => {
+    let active = true;
+    void authService.restoreSession()
+      .then(async (session) => {
+        if (!active || !session) return;
+        setUser(session.user);
+        setIsAuthenticated(true);
+        persistedProfile.current = session.profile;
+        setProfile(session.profile);
+        await loadAccountData(session.profile);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          showToast(error instanceof Error ? error.message : 'Unable to restore your session.');
+        }
+      })
+      .finally(() => {
+        if (active) setAuthReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadAccountData, showToast]);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const session = await authService.signIn(email, password);
+    setUser(session.user);
+    persistedProfile.current = session.profile;
+    setProfile(session.profile);
+    setIsAuthenticated(true);
+    await loadAccountData(session.profile);
+  }, [loadAccountData]);
+
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const session = await authService.register(name, email, password);
+    setUser(session.user);
+    persistedProfile.current = session.profile;
+    setProfile(session.profile);
+    setIsAuthenticated(true);
+    await loadAccountData(session.profile);
+  }, [loadAccountData]);
+
+  const signOut = useCallback(async () => {
+    await authService.signOut();
+    resetAccountState();
+  }, [resetAccountState]);
+
   const isSaved = useCallback((id: string) => savedIds.includes(id), [savedIds]);
 
   const toggleSaved = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      if (!isAuthenticated) {
+        showToast('Sign in to save opportunities.');
+        return;
+      }
       const exists = savedIds.includes(id);
-      setSavedIds((current) =>
-        exists ? current.filter((item) => item !== id) : [...current, id],
-      );
-      showToast(exists ? 'Removed from saved' : 'Saved for later');
+      try {
+        if (exists) {
+          await savedService.removeSavedId(id);
+          setSavedIds((current) => current.filter((item) => item !== id));
+        } else {
+          await savedService.addSavedId(id);
+          setSavedIds((current) => current.includes(id) ? current : [...current, id]);
+        }
+        showToast(exists ? 'Removed from saved' : 'Saved for later');
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to update saved opportunities.');
+      }
     },
-    [savedIds, showToast],
+    [isAuthenticated, savedIds, showToast],
   );
 
   const savedOpportunities = useMemo(
@@ -134,21 +256,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [notifications],
   );
 
-  const markAllRead = useCallback(() => {
-    setNotifications((current) =>
-      current.map((notification) => ({ ...notification, unread: false })),
-    );
-  }, []);
+  const markAllRead = useCallback(async () => {
+    try {
+      await notificationService.markAllRead();
+      setNotifications((current) =>
+        current.map((notification) => ({ ...notification, unread: false })),
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update notifications.');
+    }
+  }, [showToast]);
 
-  const markNotificationRead = useCallback((id: string) => {
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.id === id ? { ...notification, unread: false } : notification,
-      ),
-    );
-  }, []);
+  const markNotificationRead = useCallback(async (id: string) => {
+    try {
+      await notificationService.markNotificationRead(id);
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === id ? { ...notification, unread: false } : notification,
+        ),
+      );
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update notification.');
+    }
+  }, [showToast]);
 
   const updateProfile = useCallback((patch: Partial<UserProfile>) => {
+    if (!isAuthenticated) {
+      showToast('Sign in to save profile changes.');
+      return;
+    }
     setProfile((current) => ({
       ...current,
       ...patch,
@@ -159,25 +295,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? { ...current.notificationPreferences, ...patch.notificationPreferences }
         : current.notificationPreferences,
     }));
-  }, []);
+  }, [isAuthenticated, showToast]);
+
+  useEffect(() => {
+    if (!isAuthenticated || profile === persistedProfile.current) return;
+    const timer = setTimeout(() => {
+      profileSyncQueue.current = profileSyncQueue.current
+        .then(() => profileService.saveProfile(profile))
+        .then(() => {
+          if (profileRef.current === profile) persistedProfile.current = profile;
+        })
+        .catch((error: unknown) => {
+          showToast(error instanceof Error ? error.message : 'Unable to save profile changes.');
+        });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, profile, showToast]);
 
   const updateApplicationStatus = useCallback(
-    (id: string, status: ApplicationStatus) => {
-      setApplications((current) =>
-        applicationService.updateApplicationStatus(current, id, status),
-      );
+    async (id: string, status: ApplicationStatus) => {
+      try {
+        await applicationService.updateApplicationStatus(id, status);
+        const updatedAt = new Intl.DateTimeFormat('en-ZA', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+        }).format(new Date());
+        setApplications((current) => current.map((application) =>
+          application.id === id ? { ...application, status, updatedAt } : application,
+        ));
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to update application status.');
+      }
     },
-    [],
+    [showToast],
   );
 
   const addApplication = useCallback(
-    (opportunityId: string) => {
-      setApplications((current) =>
-        applicationService.addApplicationRecord(current, opportunityId),
-      );
-      showToast('Added to your application tracker');
+    async (opportunityId: string) => {
+      if (!isAuthenticated) {
+        showToast('Sign in to track opportunities.');
+        return;
+      }
+      try {
+        const record = await applicationService.addApplicationRecord(opportunityId);
+        setApplications((current) => [
+          ...current.filter((application) => application.id !== record.id),
+          record,
+        ]);
+        showToast('Added to your application tracker');
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to track this opportunity.');
+      }
     },
-    [showToast],
+    [isAuthenticated, showToast],
+  );
+
+  const refreshAdmin = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setAdminLoading(true);
+    setAdminError(null);
+    try {
+      setAdminListings(await adminService.getAdminListings());
+    } catch (error) {
+      setAdminError(
+        error instanceof Error ? error.message : 'Unable to load administrator listings.',
+      );
+    } finally {
+      setAdminLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  const adminSummary = useMemo(
+    () => adminService.summariseListings(adminListings),
+    [adminListings],
   );
 
   const adminAttention = useMemo(
@@ -190,63 +381,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const saveAdminListing = useCallback(
-    (listing: AdminListing, mode: 'draft' | 'publish') => {
-      const existing = adminListings.find((item) => item.id === listing.id);
-      const publish = mode === 'publish';
-      const nextStatus = publish ? 'Published' : 'Draft';
+    async (listing: AdminListing, mode: 'draft' | 'publish') => {
+      try {
+        const saved = await adminService.saveAdminListing(listing, mode);
+        setAdminListings((current) =>
+          current.some((item) => item.id === saved.id)
+            ? current.map((item) => (item.id === saved.id ? saved : item))
+            : [...current, saved],
+        );
+        showToast(mode === 'publish' ? 'Listing published' : 'Draft saved');
+        if (mode === 'publish') void loadOpportunities();
+        return true;
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : 'Unable to save this listing.',
+        );
+        return false;
+      }
+    },
+    [loadOpportunities, showToast],
+  );
 
-      setAdminListings((current) => {
-        const found = current.find((item) => item.id === listing.id);
-        if (found) {
-          return current.map((item) =>
-            item.id === listing.id ? { ...listing, status: nextStatus } : item,
-          );
-        }
-        return [{ ...listing, status: nextStatus }, ...current];
-      });
-
-      setAdminSummary((current) => {
-        if (!existing) {
-          return {
-            ...current,
-            active: publish ? current.active + 1 : current.active,
-            drafts: publish ? current.drafts : current.drafts + 1,
-          };
-        }
-        if (existing.status === 'Draft' && publish) {
-          return {
-            ...current,
-            active: current.active + 1,
-            drafts: Math.max(0, current.drafts - 1),
-          };
-        }
-        if (existing.status !== 'Draft' && !publish) {
-          return {
-            ...current,
-            active: Math.max(0, current.active - 1),
-            drafts: current.drafts + 1,
-          };
-        }
-        return current;
-      });
-
-      showToast(publish ? 'Published (demo)' : 'Draft saved (demo)');
+  const markSourceChecked = useCallback(
+    async (id: string) => {
+      const listing = adminListings.find((item) => item.id === id);
+      if (!listing) return;
+      try {
+        const saved = await adminService.markSourceChecked(listing);
+        setAdminListings((current) =>
+          current.map((item) => (item.id === saved.id ? saved : item)),
+        );
+        showToast('Source marked as checked');
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : 'Unable to update the source check.',
+        );
+      }
     },
     [adminListings, showToast],
   );
 
-  const markSourceChecked = useCallback(
-    (id: string) => {
-      setAdminListings((current) =>
-        current.map((listing) =>
-          listing.id === id
-            ? { ...listing, sourceChecked: new Date().toISOString() }
-            : listing,
-        ),
-      );
-      showToast('Source marked as checked');
+  const deleteAdminListing = useCallback(
+    async (id: string) => {
+      try {
+        await adminService.deleteAdminListing(id);
+        setAdminListings((current) => current.filter((item) => item.id !== id));
+        showToast('Listing deleted');
+        void loadOpportunities();
+        return true;
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Unable to delete this listing.');
+        return false;
+      }
     },
-    [showToast],
+    [loadOpportunities, showToast],
   );
 
   const setExploreFilters = useCallback((filters: OpportunityFilters) => {
@@ -259,6 +447,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppContextValue>(
     () => ({
+      isAuthenticated,
+      authReady,
+      user,
+      isAdmin,
+      signIn,
+      register,
+      signOut,
       opportunities,
       opportunitiesLoading,
       opportunitiesError,
@@ -279,8 +474,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       adminListings,
       adminSummary,
       adminAttention,
+      adminLoading,
+      adminError,
+      refreshAdmin,
       saveAdminListing,
       markSourceChecked,
+      deleteAdminListing,
       exploreFilters,
       setExploreFilters,
       resetExploreFilters,
@@ -288,6 +487,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showToast,
     }),
     [
+      isAuthenticated,
+      authReady,
+      user,
+      isAdmin,
+      signIn,
+      register,
+      signOut,
       opportunities,
       opportunitiesLoading,
       opportunitiesError,
@@ -308,8 +514,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       adminListings,
       adminSummary,
       adminAttention,
+      adminLoading,
+      adminError,
+      refreshAdmin,
       saveAdminListing,
       markSourceChecked,
+      deleteAdminListing,
       exploreFilters,
       setExploreFilters,
       resetExploreFilters,

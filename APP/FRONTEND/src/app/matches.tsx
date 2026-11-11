@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -13,7 +13,7 @@ import { useApp } from '@/state/AppProvider';
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const { opportunities, profile, isSaved, toggleSaved } = useApp();
+  const { isAuthenticated, opportunities, profile, isSaved, toggleSaved } = useApp();
 
   const matches = useMemo(() => getMatchingOpportunities(opportunities), [opportunities]);
 
@@ -21,17 +21,20 @@ export default function MatchesScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Matches"
-        subtitle={`Illustrative match scores for ${profile.name.split(' ')[0]}`}
+        subtitle={
+          isAuthenticated
+            ? `Illustrative match scores for ${profile.name.split(' ')[0]}`
+            : 'Illustrative match scores'
+        }
         onBack={() => router.back()}
       />
 
       <View style={styles.explainerCard}>
         <Feather name="target" size={17} color={colors.teal700} />
         <Text style={styles.explainerText}>
-          Match scores are generated illustratively for the demo and compare
-          the listing field, education level and province with your profile.
-          Scores are not real predictions — always read the official
-          requirements before applying.
+          Match scores compare the listing field, education level and province
+          with your profile. They are not real predictions — always read the
+          official requirements before applying.
         </Text>
       </View>
 
@@ -46,7 +49,7 @@ export default function MatchesScreen() {
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
           {matches.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
@@ -56,7 +59,7 @@ export default function MatchesScreen() {
               onOpen={() => router.push(`/opportunity/${opportunity.id}`)}
             />
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );

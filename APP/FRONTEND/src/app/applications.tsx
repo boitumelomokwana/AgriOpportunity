@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -15,19 +15,40 @@ import { APPLICATION_STATUSES } from '@/types';
 const statusHints: Record<ApplicationStatus, string> = {
   Interested: 'You spotted this and want to keep an eye on it.',
   Preparing: 'You are gathering documents or drafting responses.',
-  Applied: 'Your application has been sent via the official channel.',
+  Applied: 'You marked that you applied through the official channel.',
   Interview: 'An interview or selection stage is under way.',
-  Outcome: 'A decision has been recorded for this demo entry.',
+  Outcome: 'A decision has been recorded.',
 };
 
 export default function ApplicationsScreen() {
   const router = useRouter();
   const {
+    isAuthenticated,
     applications,
     opportunities,
     updateApplicationStatus,
-    showToast,
   } = useApp();
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader
+          title="Application tracker"
+          subtitle="Sign in to track your progress"
+          onBack={() => router.back()}
+        />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="user"
+            title="Sign in to track applications"
+            message="Your application tracker is attached to your account."
+            actionLabel="Sign in"
+            onAction={() => router.push('/auth')}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const records = applications
     .map((application) => ({
@@ -40,7 +61,7 @@ export default function ApplicationsScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Application tracker"
-        subtitle="Progress is stored locally — demo only"
+        subtitle="Track your progress; apply through each official source"
         onBack={() => router.back()}
       />
 
@@ -55,7 +76,10 @@ export default function ApplicationsScreen() {
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {records.map(({ application, opportunity }) => (
             <View key={application.id} style={styles.card}>
               <Pressable
@@ -80,8 +104,6 @@ export default function ApplicationsScreen() {
                     active={application.status === status}
                     onPress={() => {
                       updateApplicationStatus(application.id, status);
-                      // No data leaves the device in this demo.
-                      showToast(`Marked as ${status.toLowerCase()} (demo)`);
                     }}
                   />
                 ))}
@@ -90,7 +112,7 @@ export default function ApplicationsScreen() {
               <Text style={styles.statusHint}>{statusHints[application.status]}</Text>
             </View>
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );

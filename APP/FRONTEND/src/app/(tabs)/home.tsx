@@ -25,6 +25,7 @@ import { chipToCategory } from '@/utils/format';
 export default function HomeScreen() {
   const router = useRouter();
   const {
+    isAuthenticated,
     profile,
     opportunities,
     opportunitiesLoading,
@@ -50,7 +51,7 @@ export default function HomeScreen() {
     .filter((opportunity) => !opportunity.isExpired)
     .slice(0, 2);
 
-  const firstName = profile.name.split(' ')[0];
+  const firstName = isAuthenticated ? profile.name.trim().split(/\s+/)[0] : 'there';
   const activeApplications = applications.filter(
     (application) => application.status !== 'Outcome',
   ).length;
@@ -90,7 +91,11 @@ export default function HomeScreen() {
                 hitSlop={8}
                 style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
               >
-                <Text style={styles.avatarText}>{profile.initials}</Text>
+                {isAuthenticated ? (
+                  <Text style={styles.avatarText}>{profile.initials}</Text>
+                ) : (
+                  <Feather name="user" size={17} color={colors.white} />
+                )}
               </Pressable>
             </View>
           }
@@ -101,25 +106,39 @@ export default function HomeScreen() {
         <View style={styles.completionCard}>
           <View style={styles.completionHeader}>
             <View style={styles.completionIcon}>
-              <Feather name="user-check" size={17} color={colors.white} />
+              <Feather
+                name={isAuthenticated ? 'user-check' : 'log-in'}
+                size={17}
+                color={colors.white}
+              />
             </View>
             <View style={styles.completionCopy}>
-              <Text style={styles.completionTitle}>Profile {profile.completion}% complete</Text>
+              <Text style={styles.completionTitle}>
+                {isAuthenticated
+                  ? `Profile ${profile.completion}% complete`
+                  : 'Sign in to personalise your feed'}
+              </Text>
               <Text style={styles.completionBody}>
-                Add your interests so we can suggest better matches.
+                {isAuthenticated
+                  ? 'Add your interests so we can suggest better matches.'
+                  : 'Create an account to save opportunities, track applications and get better matches.'}
               </Text>
             </View>
           </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${profile.completion}%` }]} />
-          </View>
+          {isAuthenticated ? (
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${profile.completion}%` }]} />
+            </View>
+          ) : null}
           <Pressable
             accessibilityRole="button"
-            onPress={() => router.push('/profile')}
+            onPress={() => router.push(isAuthenticated ? '/profile' : '/auth')}
             hitSlop={6}
             style={({ pressed }) => [styles.completionAction, pressed && styles.pressed]}
           >
-            <Text style={styles.completionActionText}>Update profile</Text>
+            <Text style={styles.completionActionText}>
+              {isAuthenticated ? 'Update profile' : 'Sign in or create an account'}
+            </Text>
             <Feather name="arrow-right" size={14} color={colors.teal700} />
           </Pressable>
         </View>
@@ -148,7 +167,7 @@ export default function HomeScreen() {
 
         <SectionHeader
           title="Best matches for you"
-          subtitle="Based on your study field and province"
+          subtitle="Illustrative scores based on your study field and province"
           actionLabel="See all"
           onAction={() => router.push('/matches')}
         />
@@ -202,7 +221,7 @@ export default function HomeScreen() {
 
         <SectionHeader
           title="Your progress"
-          subtitle="Kept on this device for the demo"
+          subtitle={isAuthenticated ? 'Synced to your account' : 'Sign in to keep your progress'}
         />
         <View style={styles.linkList}>
           <Pressable

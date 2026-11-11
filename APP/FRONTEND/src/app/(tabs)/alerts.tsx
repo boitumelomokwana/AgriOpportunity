@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -14,7 +14,7 @@ const groups: NotificationGroup[] = ['Today', 'Yesterday'];
 
 export default function AlertsScreen() {
   const router = useRouter();
-  const { notifications, unreadCount, markAllRead, markNotificationRead } = useApp();
+  const { isAuthenticated, notifications, unreadCount, markAllRead, markNotificationRead } = useApp();
 
   const updateGroup = (group: NotificationGroup) =>
     notifications.filter((notification) => notification.group === group);
@@ -47,62 +47,66 @@ export default function AlertsScreen() {
         }
       />
 
-      {notifications.length === 0 ? (
+      {!isAuthenticated || notifications.length === 0 ? (
         <View style={styles.emptyWrap}>
           <EmptyState
-            icon="bell"
-            title="No notifications"
-            message="Alerts about closing dates and new matches will show up here."
-            actionLabel="Explore opportunities"
-            onAction={() => router.push('/explore')}
+            icon={isAuthenticated ? 'bell' : 'user'}
+            title={isAuthenticated ? 'No notifications' : 'Sign in to view alerts'}
+            message={isAuthenticated
+              ? 'Alerts about closing dates and new matches will show up here.'
+              : 'Your account notifications will appear here.'}
+            actionLabel={isAuthenticated ? 'Explore opportunities' : 'Sign in'}
+            onAction={() => router.push(isAuthenticated ? '/explore' : '/auth')}
           />
         </View>
       ) : (
-        groups.map((group) => {
-          const items = updateGroup(group);
-          if (items.length === 0) return null;
-          return (
-            <View key={group}>
-              <SectionHeader title={group} />
-              <View style={styles.list}>
-                {items.map((notification) => (
-                  <Pressable
-                    key={notification.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ checked: !notification.unread }}
-                    onPress={() => pressNotification(notification)}
-                    style={({ pressed }) => [
-                      styles.card,
-                      notification.unread && styles.cardUnread,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.iconWrap,
-                        notification.unread ? styles.iconWrapUnread : styles.iconWrapRead,
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {groups.map((group) => {
+            const items = updateGroup(group);
+            if (items.length === 0) return null;
+            return (
+              <View key={group}>
+                <SectionHeader title={group} />
+                <View style={styles.list}>
+                  {items.map((notification) => (
+                    <Pressable
+                      key={notification.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ checked: !notification.unread }}
+                      onPress={() => pressNotification(notification)}
+                      style={({ pressed }) => [
+                        styles.card,
+                        notification.unread && styles.cardUnread,
+                        pressed && styles.pressed,
                       ]}
                     >
-                      <Feather
-                        name={notification.icon}
-                        size={17}
-                        color={notification.unread ? colors.teal700 : colors.muted}
-                      />
-                    </View>
-                    <View style={styles.copy}>
-                      <Text style={[styles.title, notification.unread && styles.titleUnread]}>
-                        {notification.title}
-                      </Text>
-                      <Text style={styles.body}>{notification.body}</Text>
-                    </View>
-                    <Text style={styles.time}>{notification.time}</Text>
-                    {notification.unread ? <View style={styles.dot} /> : null}
-                  </Pressable>
-                ))}
+                      <View
+                        style={[
+                          styles.iconWrap,
+                          notification.unread ? styles.iconWrapUnread : styles.iconWrapRead,
+                        ]}
+                      >
+                        <Feather
+                          name={notification.icon}
+                          size={17}
+                          color={notification.unread ? colors.teal700 : colors.muted}
+                        />
+                      </View>
+                      <View style={styles.copy}>
+                        <Text style={[styles.title, notification.unread && styles.titleUnread]}>
+                          {notification.title}
+                        </Text>
+                        <Text style={styles.body}>{notification.body}</Text>
+                      </View>
+                      <Text style={styles.time}>{notification.time}</Text>
+                      {notification.unread ? <View style={styles.dot} /> : null}
+                    </Pressable>
+                  ))}
+                </View>
               </View>
-            </View>
-          );
-        })
+            );
+          })}
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -128,9 +132,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
   },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
+  },
   list: {
     gap: spacing.md,
-    paddingHorizontal: spacing.xl,
   },
   card: {
     flexDirection: 'row',

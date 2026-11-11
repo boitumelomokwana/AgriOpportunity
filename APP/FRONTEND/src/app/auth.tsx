@@ -26,7 +26,7 @@ interface FormErrors {
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { showToast, reloadOpportunities } = useApp();
+  const { showToast, signIn, register } = useApp();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState<FormState>({ name: '', email: '', password: '' });
   const [errors, setErrors] = useState<FormErrors>({});
@@ -45,8 +45,8 @@ export default function AuthScreen() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
       nextErrors.email = 'Enter a valid email address.';
     }
-    if (form.password.length < 6) {
-      nextErrors.password = 'Password must be at least 6 characters.';
+    if (form.password.length < 8) {
+      nextErrors.password = 'Password must be at least 8 characters.';
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
@@ -55,13 +55,19 @@ export default function AuthScreen() {
   const submit = async () => {
     if (!validate()) return;
     setSubmitting(true);
-    // Simulated local sign-in for demonstration purposes only.
-    // No real authentication backend is used in this phase.
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    await reloadOpportunities();
-    setSubmitting(false);
-    router.replace('/(tabs)');
-    showToast(mode === 'login' ? 'Signed in (demo)' : 'Account created (demo)');
+    try {
+      if (mode === 'login') {
+        await signIn(form.email.trim(), form.password);
+      } else {
+        await register(form.name.trim(), form.email.trim(), form.password);
+      }
+      await router.replace('/(tabs)/home');
+      showToast(mode === 'login' ? 'Signed in' : 'Account created');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to authenticate.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -78,8 +84,8 @@ export default function AuthScreen() {
         </Text>
         <Text style={styles.subtitle}>
           {mode === 'login'
-            ? 'Sign in to your trial demo account to save and track opportunities.'
-            : 'Set up a demo profile to see matching opportunities.'}
+            ? 'Sign in to save and track opportunities across your devices.'
+              : 'Create an account to save opportunities and track your progress.'}
         </Text>
 
         <View style={styles.modeSwitch}>
@@ -126,7 +132,7 @@ export default function AuthScreen() {
             label="Password"
             value={form.password}
             onChangeText={(value) => updateField('password', value)}
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             secureTextEntry
             autoComplete={mode === 'login' ? 'password' : 'new-password'}
             error={errors.password}
@@ -134,7 +140,7 @@ export default function AuthScreen() {
         </View>
 
         <Button
-          title={mode === 'login' ? 'Sign in' : 'Create demo profile'}
+          title={mode === 'login' ? 'Sign in' : 'Create profile'}
           fullWidth
           loading={submitting}
           onPress={submit}
@@ -142,11 +148,10 @@ export default function AuthScreen() {
         />
 
         <View style={styles.demoCard}>
-          <Feather name="info" size={16} color={colors.teal700} />
+          <Feather name="shield" size={16} color={colors.teal700} />
           <Text style={styles.demoText}>
-            This is a frontend demonstration. No real account is created, no
-            credentials are sent anywhere, and the sample profile stays local
-            on this device.
+            Your password is securely hashed by the API. Use a unique password
+            and connect only to a trusted server.
           </Text>
         </View>
       </ScrollView>

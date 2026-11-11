@@ -151,6 +151,12 @@ export interface ApplicationRecord {
 
 export type AdminListingStatus = 'Published' | 'Draft' | 'Closing soon' | 'Expired';
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: 'user' | 'admin';
+}
+
 export interface AdminListing {
   id: string;
   title: string;
@@ -167,6 +173,14 @@ export interface AdminListing {
   applicationMethod: string;
   sourceUrl: string;
   sourceChecked: string;
+  // Fields preserved from the full opportunity record so editing through the
+  // admin form does not discard data the form does not expose.
+  documents?: string[];
+  qualificationsField?: string;
+  mode?: WorkMode;
+  match?: number;
+  location?: string;
+  sourceName?: string;
 }
 
 export interface AdminSummary {

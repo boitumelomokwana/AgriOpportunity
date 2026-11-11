@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -10,8 +10,9 @@ import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { SectionHeader } from '@/components/SectionHeader';
 import { colors, radius, spacing, type } from '@/constants/theme';
+import { opportunityService } from '@/services/opportunityService';
 import { useApp } from '@/state/AppProvider';
-import type { IconName } from '@/types';
+import type { IconName, Opportunity } from '@/types';
 import { closingLabel, closingTone, matchLabel } from '@/utils/format';
 
 function MetaItem({ icon, text }: { icon: IconName; text: string }) {
@@ -33,8 +34,49 @@ export default function OpportunityDetailScreen() {
     () => opportunities.find((item) => item.id === id),
     [opportunities, id],
   );
+  const [fetched, setFetched] = useState<Opportunity | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  if (!opportunity) {
+  useEffect(() => {
+    if (opportunity || !id) return;
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+    void opportunityService
+      .getOpportunityById(id)
+      .then((record) => {
+        if (!active) return;
+        if (record) setFetched(record);
+        else setLoadError('not-found');
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setLoadError(error instanceof Error ? error.message : 'Unable to load this opportunity.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, opportunity]);
+
+  const record = opportunity ?? fetched;
+
+  if (!record && loading) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader onBack={() => router.back()} />
+        <View style={styles.emptyWrap}>
+          <ActivityIndicator size="large" color={colors.teal700} />
+          <Text style={styles.loadingText}>Loading opportunity…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!record) {
     return (
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
         <AppHeader onBack={() => router.back()} />
@@ -42,7 +84,11 @@ export default function OpportunityDetailScreen() {
           <EmptyState
             icon="alert-circle"
             title="Opportunity unavailable"
-            message="This illustrative listing could not be found. It may have been removed from the demo data."
+            message={
+              loadError === 'not-found'
+                ? 'This opportunity could not be found. It may have been removed or is no longer published.'
+                : loadError ?? 'Unable to load this opportunity.'
+            }
             actionLabel="Back to explore"
             onAction={() => router.replace('/explore')}
           />
@@ -51,15 +97,15 @@ export default function OpportunityDetailScreen() {
     );
   }
 
-  const saved = isSaved(opportunity.id);
+  const saved = isSaved(record.id);
   const application = applications.find(
-    (record) => record.opportunityId === opportunity.id,
+    (item) => item.opportunityId === record.id,
   );
-  const tone = closingTone(opportunity);
-  const expired = Boolean(opportunity.isExpired);
+  const tone = closingTone(record);
+  const expired = Boolean(record.isExpired);
 
   const openSource = async () => {
-    await WebBrowser.openBrowserAsync(opportunity.sourceUrl);
+    await WebBrowser.openBrowserAsync(record.sourceUrl);
   };
 
   return (
@@ -70,7 +116,7 @@ export default function OpportunityDetailScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={saved ? 'Remove from saved' : 'Save opportunity'}
-            onPress={() => toggleSaved(opportunity.id)}
+            onPress={() => toggleSaved(record.id)}
             hitSlop={8}
             style={({ pressed }) => [
               styles.saveButton,
@@ -95,7 +141,7 @@ export default function OpportunityDetailScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroTop}>
             <View style={styles.categoryPill}>
-              <Text style={styles.categoryText}>{opportunity.category}</Text>
+              <Text style={styles.categoryText}>{record.category}</Text>
             </View>
             {expired ? (
               <View style={[styles.tonePill, styles.tonePillExpired]}>
@@ -106,38 +152,38 @@ export default function OpportunityDetailScreen() {
                 <Text
                   style={[styles.toneText, tone === 'urgent' ? styles.toneTextStrong : null]}
                 >
-                  {closingLabel(opportunity)}
+                  {closingLabel(record)}
                 </Text>
               </View>
             )}
           </View>
-          <Text style={styles.title}>{opportunity.title}</Text>
-          <Text style={styles.organisation}>{opportunity.organisation}</Text>
+          <Text style={styles.title}>{record.title}</Text>
+          <Text style={styles.organisation}>{record.organisation}</Text>
           {!expired ? (
             <View style={styles.matchRow}>
               <View style={styles.matchPill}>
                 <Feather name="target" size={13} color={colors.navy800} />
-                <Text style={styles.matchText}>{opportunity.match}% match</Text>
+                <Text style={styles.matchText}>{record.match}% match</Text>
               </View>
-              <Text style={styles.matchLabel}>{matchLabel(opportunity.match)}</Text>
+              <Text style={styles.matchLabel}>{matchLabel(record.match)}</Text>
             </View>
           ) : null}
           <View style={styles.metaGrid}>
-            <MetaItem icon="map-pin" text={opportunity.location} />
-            <MetaItem icon="book-open" text={opportunity.education} />
-            <MetaItem icon="grid" text={opportunity.field} />
-            <MetaItem icon="monitor" text={opportunity.mode} />
+            <MetaItem icon="map-pin" text={record.location} />
+            <MetaItem icon="book-open" text={record.education} />
+            <MetaItem icon="grid" text={record.field} />
+            <MetaItem icon="monitor" text={record.mode} />
           </View>
         </View>
 
         <View style={styles.summaryCard}>
           <Text style={styles.summaryHeading}>About this opportunity</Text>
-          <Text style={styles.summaryBody}>{opportunity.summary}</Text>
+          <Text style={styles.summaryBody}>{record.summary}</Text>
         </View>
 
         <SectionHeader title="Eligibility" subtitle="Check every requirement before applying" />
         <View style={styles.listCard}>
-          {opportunity.eligibility.map((item) => (
+          {record.eligibility.map((item) => (
             <View key={item} style={styles.listRow}>
               <View style={styles.bullet}>
                 <Feather name="check" size={13} color={colors.teal700} />
@@ -149,12 +195,12 @@ export default function OpportunityDetailScreen() {
 
         <SectionHeader title="Documents" subtitle="Prepare these before applying" />
         <View style={styles.listCard}>
-          {opportunity.documents.length === 0 ? (
+          {record.documents.length === 0 ? (
             <Text style={styles.listText}>
-              No documents listed for this illustrative entry.
+              No documents listed for this opportunity.
             </Text>
           ) : (
-            opportunity.documents.map((document) => (
+            record.documents.map((document) => (
               <View key={document} style={styles.listRow}>
                 <View style={[styles.bullet, styles.bulletBlue]}>
                   <Feather name="file-text" size={13} color={colors.navy800} />
@@ -165,9 +211,9 @@ export default function OpportunityDetailScreen() {
           )}
         </View>
 
-        <SectionHeader title="How to apply" subtitle="Steps you can follow locally" />
+        <SectionHeader title="How to apply" subtitle="Follow the official application process" />
         <View style={styles.listCard}>
-          {opportunity.howToApply.map((step, index) => (
+          {record.howToApply.map((step, index) => (
             <View key={step} style={styles.listRow}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>{index + 1}</Text>
@@ -182,32 +228,35 @@ export default function OpportunityDetailScreen() {
           <View style={styles.gridColumn}>
             <Text style={styles.gridLabel}>Closes</Text>
             <Text style={[styles.gridValue, expired && styles.gridValueMuted]}>
-              {opportunity.closes}
+              {record.closes}
             </Text>
           </View>
           <View style={styles.gridColumn}>
             <Text style={styles.gridLabel}>Applications</Text>
-            <Text style={styles.gridValue}>{expired ? 'Closed (demo)' : 'Open (demo)'}</Text>
+            <Text style={styles.gridValue}>{expired ? 'Closed' : 'Open'}</Text>
           </View>
           <View style={styles.gridColumn}>
             <Text style={styles.gridLabel}>Source updated</Text>
-            <Text style={styles.gridValue}>{opportunity.lastUpdated}</Text>
+            <Text style={styles.gridValue}>{record.lastUpdated}</Text>
           </View>
         </View>
 
-        <SectionHeader title="Where this came from" subtitle="Demo data provenance" />
+        <SectionHeader title="Where this came from" subtitle="Always confirm on the official source" />
         <View style={styles.sourceCard}>
           <View style={styles.sourceRow}>
             <Feather name="external-link" size={16} color={colors.teal700} />
-            <Text style={styles.sourceName}>{opportunity.sourceName}</Text>
+            <Text style={styles.sourceName}>{record.sourceName}</Text>
           </View>
-          <Text style={styles.sourceText}>{opportunity.sourceUrl}</Text>
+          <Text style={styles.sourceText}>{record.sourceUrl}</Text>
+          <Text style={styles.sourceNote}>
+            Seeded listings are illustrative demo data, not verified vacancies.
+          </Text>
         </View>
 
         <View style={styles.actions}>
           {expired ? (
             <Button
-              title="Demo: this listing has closed"
+              title="This listing has closed"
               variant="secondary"
               icon="clock"
               fullWidth
@@ -225,7 +274,7 @@ export default function OpportunityDetailScreen() {
               title="Track this application"
               icon="clipboard"
               fullWidth
-              onPress={() => addApplication(opportunity.id)}
+              onPress={() => addApplication(record.id)}
             />
           )}
           {!expired ? (
@@ -242,11 +291,11 @@ export default function OpportunityDetailScreen() {
             variant={saved ? 'secondary' : 'text'}
             icon="bookmark"
             fullWidth
-            onPress={() => toggleSaved(opportunity.id)}
+            onPress={() => toggleSaved(record.id)}
           />
           <Text style={styles.demoNote}>
-            Frontend demo — no application is sent to any organisation. Tracking
-            only records progress on this device.
+            Applications are completed on the official source. This tracker records
+            your own progress and does not submit anything to the organisation.
           </Text>
         </View>
       </ScrollView>
@@ -264,6 +313,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
+    gap: spacing.md,
+  },
+  loadingText: {
+    ...type.small,
+    textAlign: 'center',
+    color: colors.muted,
   },
   saveButton: {
     width: 40,
@@ -486,6 +541,10 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     ...type.caption,
+  },
+  sourceNote: {
+    ...type.caption,
+    color: colors.amber700,
   },
   actions: {
     marginTop: spacing.xxl,

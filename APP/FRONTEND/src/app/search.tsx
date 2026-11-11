@@ -50,6 +50,11 @@ export default function SearchScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader onBack={() => router.back()} />
 
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <View style={styles.searchWrap}>
         <Feather name="search" size={17} color={colors.muted} />
         <TextInput
@@ -75,7 +80,7 @@ export default function SearchScreen() {
       </View>
 
       {query.trim().length === 0 ? (
-        <SectionHeader title="Try searching for" subtitle="Popular demo searches" />
+        <SectionHeader title="Try searching for" subtitle="Popular searches" />
       ) : (
         <Text style={styles.resultCount}>
           {results.length} {pluralise(results.length, 'result')} for “{query.trim()}”
@@ -117,6 +122,7 @@ export default function SearchScreen() {
           ))}
         </View>
       )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -125,6 +131,10 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.surfaceSoft,
+  },
+  content: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xxxl,
   },
   searchWrap: {
     marginTop: spacing.sm,

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -10,26 +10,31 @@ import { useApp } from '@/state/AppProvider';
 
 export default function SavedScreen() {
   const router = useRouter();
-  const { savedOpportunities, isSaved, toggleSaved } = useApp();
+  const { isAuthenticated, savedOpportunities, isSaved, toggleSaved } = useApp();
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Saved"
-        subtitle={`${savedOpportunities.length} kept for later · stored locally`}
+        subtitle={isAuthenticated ? `${savedOpportunities.length} saved opportunities` : 'Sign in to sync your saved opportunities'}
       />
-      {savedOpportunities.length === 0 ? (
+      {!isAuthenticated || savedOpportunities.length === 0 ? (
         <View style={styles.emptyWrap}>
           <EmptyState
-            icon="bookmark"
-            title="Nothing saved yet"
-            message="Tap the bookmark on any opportunity to keep it here for later."
-            actionLabel="Browse opportunities"
-            onAction={() => router.push('/explore')}
+            icon={isAuthenticated ? 'bookmark' : 'user'}
+            title={isAuthenticated ? 'Nothing saved yet' : 'Sign in to see saved items'}
+            message={isAuthenticated
+              ? 'Tap the bookmark on any opportunity to keep it here for later.'
+              : 'Your saved opportunities are linked to your account.'}
+            actionLabel={isAuthenticated ? 'Browse opportunities' : 'Sign in'}
+            onAction={() => router.push(isAuthenticated ? '/explore' : '/auth')}
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {savedOpportunities.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
@@ -39,7 +44,7 @@ export default function SavedScreen() {
               onOpen={() => router.push(`/opportunity/${opportunity.id}`)}
             />
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
