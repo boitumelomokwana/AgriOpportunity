@@ -1,0 +1,17 @@
+Accounts
+
+3 admins (Super Admin, Opportunity Admin, Content Admin), all with the password DemoAdmin#2026:
+demo.super@agriopportunity.test
+demo.opps@agriopportunity.test
+demo.content@agriopportunity.test
+10 students (student01@ to student10@agriopportunity.test), each with a different province and interests. Their passwords follow the pattern Student01#Demo26 up to Student10#Demo26. The new demo_users.sql creates them.
+
+10 opportunities (I trimmed demo_data.sql from 12 to 10): Internship, Graduate Programme, Grant, Learnership, Bursary, Farm Job and Training are published. WIL is approved, Scholarship is pending, and Apprenticeship is rejected, so you can test every status.
+
+demo_users.sql also gives the students a few bookmarks, applications and notifications, so their dashboards aren’t empty.
+
+How to use
+
+Run the files in this order: migrations, demo_data.sql, demo_admins.sql, demo_users.sql.
+Each demo script has a matching remove_demo_*.sql to delete it.
+Don’t use these on your live database. The passwords are written in the document.

@@ -26,8 +26,13 @@ supabase/
   tests/
     verify_setup.sql               rolled-back smoke test of the rules below
   seed/
-    demo_data.sql                  FAKE test data (5 companies, 12 opportunities, API logs)
+    demo_data.sql                  FAKE test data (5 companies, 10 opportunities, API logs)
     remove_demo_data.sql           deletes only the demo data
+    demo_admins.sql                3 FAKE admin logins (one per role) + sample audit log, dev only
+    remove_demo_admins.sql         deletes them
+    demo_users.sql                 10 FAKE students (+ bookmarks, applications, notifications), dev only
+    remove_demo_users.sql          deletes them
+    DEMO_LOGINS.md                 all demo emails and passwords
 ```
 Note: `company_api_keys`, `api_submissions`, `api_logs` are in **006** (as your file list
 requires) rather than 002.
@@ -42,12 +47,13 @@ supabase db push                    # applies 001-010 in order
 Then in the SQL editor run `supabase/tests/verify_setup.sql` (expect `ALL CHECKS PASSED`).
 
 ## Demo data (optional, dev/staging only)
-Run `supabase/seed/demo_data.sql` after the migrations. It adds 5 fake companies and 12 fake
-opportunities (7 published, 2 approved, 2 pending, 1 rejected) across several provinces and
+Run `supabase/seed/demo_data.sql` after the migrations. It adds 5 fake companies and 10 fake
+opportunities (7 published, 1 approved, 1 pending, 1 rejected) across several provinces and
 categories, plus a few API log rows for the dashboard. Everything is tagged `[DEMO]` / `DEMO-nnn`,
 notifications are paused while it loads, and `remove_demo_data.sql` deletes it again.
-Demo students and admins are not included because they need Supabase Auth users; create test
-accounts in the dashboard and use `bootstrap_admin` for the admin roles.
+`demo_admins.sql` adds three fake admin logins (password `DemoAdmin#2026`, dev only, never production):
+`demo.super@`, `demo.opps@`, `demo.content@agriopportunity.test`. `demo_users.sql` adds 10 fake students
+(`student01@` to `student10@agriopportunity.test`). All logins are listed in `supabase/seed/DEMO_LOGINS.md`.
 
 ## Create the three administrators
 1. In Supabase Dashboard -> Authentication, create (or reuse) the three users.
