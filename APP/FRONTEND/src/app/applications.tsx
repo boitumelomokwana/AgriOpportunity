@@ -15,7 +15,7 @@ import { APPLICATION_STATUSES } from '@/types';
 const statusHints: Record<ApplicationStatus, string> = {
   Interested: 'You spotted this and want to keep an eye on it.',
   Preparing: 'You are gathering documents or drafting responses.',
-  Applied: 'Your application has been sent via the official channel.',
+  Applied: 'You marked that you applied through the official channel.',
   Interview: 'An interview or selection stage is under way.',
   Outcome: 'A decision has been recorded for this demo entry.',
 };
@@ -23,11 +23,33 @@ const statusHints: Record<ApplicationStatus, string> = {
 export default function ApplicationsScreen() {
   const router = useRouter();
   const {
+    isAuthenticated,
     applications,
     opportunities,
     updateApplicationStatus,
     showToast,
   } = useApp();
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader
+          title="Application tracker"
+          subtitle="Sign in to track your progress"
+          onBack={() => router.back()}
+        />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="user"
+            title="Sign in to track applications"
+            message="Your application tracker is attached to your account."
+            actionLabel="Sign in"
+            onAction={() => router.push('/auth')}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const records = applications
     .map((application) => ({
@@ -40,7 +62,7 @@ export default function ApplicationsScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Application tracker"
-        subtitle="Progress is stored locally — demo only"
+        subtitle="Track your progress; apply through each official source"
         onBack={() => router.back()}
       />
 

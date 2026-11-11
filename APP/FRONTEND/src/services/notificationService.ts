@@ -1,17 +1,18 @@
-import { mockNotifications } from '@/data/notifications';
 import type { AppNotification } from '@/types';
-import { delay } from '@/services/simulate';
+import { apiRequest } from '@/services/api';
 
 export async function getNotifications(): Promise<AppNotification[]> {
-  await delay(250);
-  return mockNotifications;
+  return apiRequest<AppNotification[]>('/me/notifications');
 }
 
-export async function markAllRead(
-  notifications: AppNotification[],
-): Promise<AppNotification[]> {
-  await delay(150);
-  return notifications.map((notification) => ({ ...notification, unread: false }));
+export async function markAllRead(): Promise<void> {
+  await apiRequest<void>('/me/notifications/read-all', { method: 'PATCH' });
 }
 
-export const notificationService = { getNotifications, markAllRead };
+export async function markNotificationRead(id: string): Promise<void> {
+  await apiRequest<void>(`/me/notifications/${encodeURIComponent(id)}/read`, {
+    method: 'PATCH',
+  });
+}
+
+export const notificationService = { getNotifications, markAllRead, markNotificationRead };

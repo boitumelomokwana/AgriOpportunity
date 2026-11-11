@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Chip } from '@/components/Chip';
+import { EmptyState } from '@/components/EmptyState';
 import { FormField } from '@/components/FormField';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Toggle } from '@/components/Toggle';
@@ -33,7 +34,24 @@ const careerFieldOptions = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, updateProfile, showToast } = useApp();
+  const { isAuthenticated, profile, updateProfile, signOut, showToast } = useApp();
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader title="Profile" subtitle="Sign in to manage your account" />
+        <View style={styles.emptyWrap}>
+          <EmptyState
+            icon="user"
+            title="Your profile is private"
+            message="Create an account or sign in to save your profile and preferences."
+            actionLabel="Sign in"
+            onAction={() => router.push('/auth')}
+          />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const toggleCareerField = (field: string) => {
     const fields = profile.preferences.careerFields.includes(field)
@@ -58,7 +76,7 @@ export default function ProfileScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Profile"
-        subtitle="Kept locally for this demonstration"
+        subtitle="Your account and opportunity preferences"
         action={
           <Pressable
             accessibilityRole="button"
@@ -290,13 +308,14 @@ export default function ProfileScreen() {
       <Pressable
         accessibilityRole="button"
         onPress={() => {
-          showToast('Demo mode: sign-in state is local only');
-          router.replace('/');
+          void signOut().then(() => router.replace('/')).catch((error: unknown) => {
+            showToast(error instanceof Error ? error.message : 'Unable to sign out.');
+          });
         }}
         style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
       >
         <Feather name="log-out" size={17} color={colors.red700} />
-        <Text style={styles.signOutText}>Back to welcome</Text>
+        <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
     </SafeAreaView>
   );
@@ -349,6 +368,11 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.surfaceSoft,
+  },
+  emptyWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
   },
   iconButton: {
     width: 40,

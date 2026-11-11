@@ -14,7 +14,7 @@ const groups: NotificationGroup[] = ['Today', 'Yesterday'];
 
 export default function AlertsScreen() {
   const router = useRouter();
-  const { notifications, unreadCount, markAllRead, markNotificationRead } = useApp();
+  const { isAuthenticated, notifications, unreadCount, markAllRead, markNotificationRead } = useApp();
 
   const updateGroup = (group: NotificationGroup) =>
     notifications.filter((notification) => notification.group === group);
@@ -47,14 +47,16 @@ export default function AlertsScreen() {
         }
       />
 
-      {notifications.length === 0 ? (
+      {!isAuthenticated || notifications.length === 0 ? (
         <View style={styles.emptyWrap}>
           <EmptyState
-            icon="bell"
-            title="No notifications"
-            message="Alerts about closing dates and new matches will show up here."
-            actionLabel="Explore opportunities"
-            onAction={() => router.push('/explore')}
+            icon={isAuthenticated ? 'bell' : 'user'}
+            title={isAuthenticated ? 'No notifications' : 'Sign in to view alerts'}
+            message={isAuthenticated
+              ? 'Alerts about closing dates and new matches will show up here.'
+              : 'Your account notifications will appear here.'}
+            actionLabel={isAuthenticated ? 'Explore opportunities' : 'Sign in'}
+            onAction={() => router.push(isAuthenticated ? '/explore' : '/auth')}
           />
         </View>
       ) : (

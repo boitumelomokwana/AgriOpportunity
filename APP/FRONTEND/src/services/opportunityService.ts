@@ -1,7 +1,6 @@
-import { mockOpportunities } from '@/data/opportunities';
 import type { Opportunity, OpportunityFilters } from '@/types';
 import { daysUntil } from '@/utils/date';
-import { delay, maybeFail } from '@/services/simulate';
+import { apiRequest } from '@/services/api';
 
 export const defaultFilters: OpportunityFilters = {
   types: [],
@@ -114,14 +113,16 @@ export function getMatchingOpportunities(opportunities: Opportunity[]): Opportun
 }
 
 export async function getOpportunities(): Promise<Opportunity[]> {
-  await delay(320);
-  maybeFail();
-  return mockOpportunities;
+  return apiRequest<Opportunity[]>('/opportunities');
 }
 
 export async function getOpportunityById(id: string): Promise<Opportunity | undefined> {
-  await delay(150);
-  return mockOpportunities.find((opportunity) => opportunity.id === id);
+  try {
+    return await apiRequest<Opportunity>(`/opportunities/${encodeURIComponent(id)}`);
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Opportunity not found.') return undefined;
+    throw error;
+  }
 }
 
 export const opportunityService = {

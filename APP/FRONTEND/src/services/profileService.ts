@@ -1,15 +1,15 @@
-import { mockProfile } from '@/data/profile';
 import type { UserProfile } from '@/types';
-import { delay } from '@/services/simulate';
+import { apiRequest } from '@/services/api';
 
 export async function getProfile(): Promise<UserProfile> {
-  await delay(200);
-  return mockProfile;
+  return apiRequest<UserProfile>('/me/profile');
 }
 
 export async function saveProfile(profile: UserProfile): Promise<UserProfile> {
-  await delay(350);
-  return profile;
+  return apiRequest<UserProfile>('/me/profile', {
+    method: 'PUT',
+    body: JSON.stringify(profile),
+  });
 }
 
 export const profileService = { getProfile, saveProfile };
