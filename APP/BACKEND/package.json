@@ -1,0 +1,24 @@
+{
+  "name": "agriopportunities-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AgriOpportunities API and discovery worker, backed by the authoritative Supabase project.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "discovery:once": "node src/discovery/run.js --once",
+    "discovery:worker": "node src/discovery/run.js",
+    "check": "node --check server.js && node --check src/app.js && node --check src/adminAuth.js && node --check src/routes/company.js && node --check src/routes/adminDiscovery.js && node --check src/discovery/http.js && node --check src/discovery/normalize.js && node --check src/discovery/runner.js && node --check src/discovery/scheduler.js && node --check src/discovery/adapters/shared.js && node --check src/discovery/adapters/json.js && node --check src/discovery/adapters/rss.js && node --check src/discovery/adapters/html.js && node --check src/discovery/adapters/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "cheerio": "^1.2.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0"
+  }
+}

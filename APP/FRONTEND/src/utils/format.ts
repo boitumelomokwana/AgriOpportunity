@@ -26,12 +26,26 @@ export function categoryPlural(category: OpportunityCategory): string {
       return 'Internships';
     case 'Learnership':
       return 'Learnerships';
+    case 'Graduate Programme':
     case 'Graduate programme':
       return 'Graduate programmes';
     case 'Job':
       return 'Jobs';
+    case 'Grant':
+      return 'Grants';
+    case 'Scholarship':
+      return 'Scholarships';
+    case 'Farm Job':
+      return 'Farm jobs';
+    case 'Apprenticeship':
+      return 'Apprenticeships';
+    case 'Training':
     case 'Skills training':
-      return 'Skills training';
+      return 'Training';
+    case 'WIL':
+      return 'Work-integrated learning';
+    case 'In-service Training':
+      return 'In-service training';
     case 'Youth programme':
       return 'Youth programmes';
     default:
@@ -49,6 +63,9 @@ export function categoryToChip(category: OpportunityCategory): string {
       return 'Learnerships';
     case 'Job':
       return 'Jobs';
+    case 'Graduate Programme':
+    case 'Graduate programme':
+      return 'Graduate';
     default:
       return category;
   }
@@ -65,7 +82,21 @@ export function chipToCategory(chip: string): OpportunityCategory | null {
     case 'Jobs':
       return 'Job';
     case 'Graduate':
-      return 'Graduate programme';
+      return 'Graduate Programme';
+    case 'WIL':
+      return 'WIL';
+    case 'Grants':
+      return 'Grant';
+    case 'Farm jobs':
+      return 'Farm Job';
+    case 'Scholarships':
+      return 'Scholarship';
+    case 'Training':
+      return 'Training';
+    case 'Apprenticeships':
+      return 'Apprenticeship';
+    case 'In-service':
+      return 'In-service Training';
     default:
       return null;
   }
@@ -74,12 +105,15 @@ export function chipToCategory(chip: string): OpportunityCategory | null {
 export function matchLabel(match: number): string {
   if (match >= 85) return 'Strong potential match';
   if (match >= 70) return 'Good potential match';
-  return 'Possible match';
+  if (match >= 40) return 'Possible match';
+  return 'Add more profile details to improve this score';
 }
 
 export function closingLabel(opportunity: Opportunity): string {
+  if (!opportunity.closingDate) return 'No closing date';
   if (opportunity.isExpired) return 'Expired';
   const remaining = daysUntil(opportunity.closingDate);
+  if (remaining === Number.POSITIVE_INFINITY) return 'No closing date';
   if (remaining < 0) return 'Expired';
   if (remaining === 0) return 'Closes today';
   if (remaining <= 7) return `Closing in ${remaining} ${pluralise(remaining, 'day')}`;
@@ -87,7 +121,7 @@ export function closingLabel(opportunity: Opportunity): string {
 }
 
 export function closingTone(opportunity: Opportunity): 'urgent' | 'soon' | 'normal' {
-  if (opportunity.isExpired) return 'normal';
+  if (opportunity.isExpired || !opportunity.closingDate) return 'normal';
   const remaining = daysUntil(opportunity.closingDate);
   if (remaining <= 7) return 'urgent';
   if (remaining <= 30) return 'soon';
@@ -102,6 +136,5 @@ export function activeFilterCount(filters: OpportunityFilters): number {
   if (filters.education !== 'Any level') count += 1;
   if (filters.modes.length > 0) count += 1;
   if (!filters.openOnly) count += 1;
-  if (!filters.hideExpired) count += 1;
   return count;
 }

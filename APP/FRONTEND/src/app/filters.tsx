@@ -8,6 +8,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/Button';
 import { Chip } from '@/components/Chip';
 import { FormField } from '@/components/FormField';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 import { Toggle } from '@/components/Toggle';
 import { colors, radius, spacing, type } from '@/constants/theme';
 import { defaultFilters, filterOpportunities } from '@/services/opportunityService';
@@ -49,17 +50,16 @@ export default function FiltersScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Filters"
-        subtitle="Narrow the demo listings"
+        subtitle="Narrow opportunities to what fits you"
         onBack={() => router.back()}
       />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
       >
         <FilterSection label="Opportunity type" multi>
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {OPPORTUNITY_CATEGORIES.map((category) => (
               <Chip
                 key={category}
@@ -68,11 +68,11 @@ export default function FiltersScreen() {
                 onPress={toggleIn('types', category)}
               />
             ))}
-          </View>
+          </ScrollView>
         </FilterSection>
 
         <FilterSection label="Province">
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {PROVINCES.map((province) => (
               <Chip
                 key={province}
@@ -82,16 +82,20 @@ export default function FiltersScreen() {
               />
             ))}
             <Chip
-              label="Include national listings"
+              label="National listings"
               icon="globe"
+              active={draft.provinces.length === 0}
               onPress={() => patch({ provinces: [] })}
             />
-          </View>
-          <Text style={styles.hint}>Clear provinces to include national opportunities.</Text>
+          </ScrollView>
+          <Text style={styles.hint}>
+            National opportunities appear whenever no province is selected. Tap the globe
+            chip to clear your province choices.
+          </Text>
         </FilterSection>
 
         <FilterSection label="Education level">
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {EDUCATION_LEVELS.map((level) => (
               <Chip
                 key={level}
@@ -100,11 +104,11 @@ export default function FiltersScreen() {
                 onPress={() => patch({ education: level })}
               />
             ))}
-          </View>
+          </ScrollView>
         </FilterSection>
 
         <FilterSection label="Closing window">
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {CLOSING_WINDOWS.map((window) => (
               <Chip
                 key={window}
@@ -113,7 +117,7 @@ export default function FiltersScreen() {
                 onPress={() => patch({ closing: window })}
               />
             ))}
-          </View>
+          </ScrollView>
           {draft.closing === 'Choose dates' ? (
             <View style={styles.dateRow}>
               <FormField
@@ -137,7 +141,7 @@ export default function FiltersScreen() {
         </FilterSection>
 
         <FilterSection label="Work mode">
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {WORK_MODES.map((mode) => (
               <Chip
                 key={mode}
@@ -146,14 +150,16 @@ export default function FiltersScreen() {
                 onPress={toggleIn('modes', mode)}
               />
             ))}
-          </View>
+          </ScrollView>
         </FilterSection>
 
         <View style={styles.switchCard}>
           <View style={styles.switchRow}>
             <View style={styles.switchCopy}>
               <Text style={styles.switchTitle}>Open opportunities only</Text>
-              <Text style={styles.switchBody}>Hide listings whose closing date has passed</Text>
+              <Text style={styles.switchBody}>
+                Hide listings whose closing date has passed
+              </Text>
             </View>
             <Toggle
               value={draft.openOnly}
@@ -161,19 +167,8 @@ export default function FiltersScreen() {
               accessibilityLabel="Open opportunities only"
             />
           </View>
-          <View style={styles.switchRow}>
-            <View style={styles.switchCopy}>
-              <Text style={styles.switchTitle}>Hide expired entries</Text>
-              <Text style={styles.switchBody}>Skip closed demo listings entirely</Text>
-            </View>
-            <Toggle
-              value={draft.hideExpired}
-              onValueChange={(hideExpired) => patch({ hideExpired })}
-              accessibilityLabel="Hide expired entries"
-            />
-          </View>
         </View>
-      </ScrollView>
+        </KeyboardAwareScrollView>
 
       <View style={styles.footer}>
         <Pressable

@@ -1,8 +1,25 @@
-import type { AdminListing, AdminSummary } from '@/types';
+import type {
+  AdminListing,
+  AdminListingStatus,
+  AdminSummary,
+  OpportunityStatus,
+} from '@/types';
 import { daysFromNow, formatShortDate } from '@/utils/date';
 
+const RAW_STATUS: Record<AdminListingStatus, OpportunityStatus> = {
+  Published: 'published',
+  'Closing soon': 'published',
+  Expired: 'published',
+  Approved: 'approved',
+  Pending: 'pending',
+  Rejected: 'rejected',
+};
+
 function listing(
-  input: Omit<AdminListing, 'closes' | 'closingDate' | 'sourceChecked'> & {
+  input: Omit<
+    AdminListing,
+    'closes' | 'closingDate' | 'sourceChecked' | 'rawStatus' | 'applicationUrl'
+  > & {
     closesInDays: number;
     sourceCheckedDaysAgo: number;
   },
@@ -11,6 +28,8 @@ function listing(
   const closingDate = daysFromNow(closesInDays);
   return {
     ...rest,
+    rawStatus: RAW_STATUS[input.status],
+    applicationUrl: input.sourceUrl,
     closingDate,
     closes: formatShortDate(closingDate),
     sourceChecked: daysFromNow(-sourceCheckedDaysAgo),
@@ -31,8 +50,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative funding support for South African students pursuing engineering and related technology qualifications.',
     education: 'Grade 12 / Undergraduate',
     eligibility: 'South African citizen or permanent resident; studying full time.',
-    openingDate: formatShortDate(daysFromNow(-20)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/future-engineers-bursary',
   }),
   listing({
@@ -48,8 +65,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative 12-month internship for graduates interested in digital campaigns, content and analytics.',
     education: 'Diploma / Degree',
     eligibility: 'Marketing, communications or media qualification; based in the Western Cape.',
-    openingDate: formatShortDate(daysFromNow(-10)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/digital-marketing-internship',
   }),
   listing({
@@ -59,14 +74,12 @@ export const mockAdminListings: AdminListing[] = [
     category: 'Learnership',
     province: 'Limpopo',
     closesInDays: 4,
-    status: 'Draft',
+    status: 'Pending',
     sourceCheckedDaysAgo: 52,
     description:
       'Illustrative practical training programme introducing young job seekers to solar installation and maintenance.',
     education: 'Grade 12',
     eligibility: 'Grade 12 with mathematics or technical subjects; aged 18–35.',
-    openingDate: formatShortDate(daysFromNow(-5)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/solar-technician-learnership',
   }),
   listing({
@@ -82,8 +95,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative graduate placement focused on data analysis, business insight and career mentorship.',
     education: "Bachelor's degree",
     eligibility: 'Recent data, statistics, finance or mathematics graduate.',
-    openingDate: formatShortDate(daysFromNow(-12)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/graduate-data-analyst-programme',
   }),
   listing({
@@ -99,8 +110,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative entry-level role supporting community workshops and youth programme administration.',
     education: 'Grade 12',
     eligibility: 'Grade 12; community or administration experience is helpful.',
-    openingDate: formatShortDate(daysFromNow(-8)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/youth-support-assistant',
   }),
   listing({
@@ -116,8 +125,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative bursary for learners and students interested in agriculture, food systems and rural development.',
     education: 'Grade 12 / Undergraduate',
     eligibility: 'Studying or accepted into an agriculture-related programme.',
-    openingDate: formatShortDate(daysFromNow(-30)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/agricultural-science-bursary',
   }),
   listing({
@@ -133,8 +140,6 @@ export const mockAdminListings: AdminListing[] = [
       'Illustrative bursary for students building skills in data science, statistics and machine learning.',
     education: 'Undergraduate / Postgraduate',
     eligibility: 'Registered for a data-related qualification.',
-    openingDate: formatShortDate(daysFromNow(-120)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/data-science-bursary',
   }),
   listing({
@@ -144,14 +149,12 @@ export const mockAdminListings: AdminListing[] = [
     category: 'Skills training',
     province: 'North West',
     closesInDays: 85,
-    status: 'Draft',
+    status: 'Pending',
     sourceCheckedDaysAgo: 5,
     description:
       'Illustrative short programme introducing hospitality, guest services and tourism operations.',
     education: 'Grade 12',
     eligibility: 'Grade 12 or equivalent experience; interest in hospitality.',
-    openingDate: formatShortDate(daysFromNow(-2)),
-    applicationMethod: 'External official website',
     sourceUrl: 'https://example.org/opportunities/tourism-skills-programme',
   }),
 ];

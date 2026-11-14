@@ -8,24 +8,30 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState } from 'react-native';
 
-import { mockApplications } from '@/data/applications';
-import { adminAttentionThresholdDays, mockAdminListings, mockAdminSummary } from '@/data/admin';
-import { mockNotifications } from '@/data/notifications';
-import { mockProfile } from '@/data/profile';
+import { errorMessage } from '@/lib/errors';
+import { supabase } from '@/lib/supabase';
 import { applicationService } from '@/services/applicationService';
-import { defaultFilters, opportunityService } from '@/services/opportunityService';
+import { bookmarkService } from '@/services/bookmarkService';
+import { discoveryService } from '@/services/discoveryService';
+import { notificationService } from '@/services/notificationService';
+import {
+  defaultFilters,
+  opportunityService,
+  withMatches,
+} from '@/services/opportunityService';
+import { emptyProfile, useAuth } from '@/state/AuthProvider';
 import type {
-  AdminListing,
-  AdminSummary,
   AppNotification,
   ApplicationRecord,
   ApplicationStatus,
+  DeadlineReminderRecord,
   Opportunity,
   OpportunityFilters,
+  SavedSearch,
   UserProfile,
 } from '@/types';
-import { daysUntil } from '@/utils/date';
 
 interface ToastState {
   id: number;
@@ -38,23 +44,29 @@ interface AppContextValue {
   opportunitiesError: string | null;
   reloadOpportunities: () => Promise<void>;
   profile: UserProfile;
+  isSignedIn: boolean;
   updateProfile: (patch: Partial<UserProfile>) => void;
   savedIds: string[];
   savedOpportunities: Opportunity[];
   isSaved: (id: string) => boolean;
-  toggleSaved: (id: string) => void;
+  toggleSaved: (id: string) => Promise<void>;
   notifications: AppNotification[];
   unreadCount: number;
-  markAllRead: () => void;
-  markNotificationRead: (id: string) => void;
+  markAllRead: () => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
   applications: ApplicationRecord[];
-  updateApplicationStatus: (id: string, status: ApplicationStatus) => void;
-  addApplication: (opportunityId: string) => void;
-  adminListings: AdminListing[];
-  adminSummary: AdminSummary;
-  adminAttention: AdminListing[];
-  saveAdminListing: (listing: AdminListing, mode: 'draft' | 'publish') => void;
-  markSourceChecked: (id: string) => void;
+  updateApplicationStatus: (
+    id: string,
+    status: ApplicationStatus,
+  ) => Promise<void>;
+  addApplication: (opportunityId: string) => Promise<void>;
+  savedSearches: SavedSearch[];
+  createSavedSearch: (name: string, query: string) => Promise<void>;
+  deleteSavedSearch: (id: string) => Promise<void>;
+  reminders: DeadlineReminderRecord[];
+  setReminder: (opportunityId: string, daysBefore?: number) => Promise<void>;
+  removeReminder: (opportunityId: string) => Promise<void>;
+  refreshUserData: () => Promise<void>;
   exploreFilters: OpportunityFilters;
   setExploreFilters: (filters: OpportunityFilters) => void;
   resetExploreFilters: () => void;
@@ -65,30 +77,68 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const {
+    user,
+    profile: authProfile,
+    updateProfile: persistProfile,
+    profileSaveError,
+  } = useAuth();
+
+  const [rawOpportunities, setRawOpportunities] = useState<Opportunity[]>([]);
   const [opportunitiesLoading, setOpportunitiesLoading] = useState(true);
   const [opportunitiesError, setOpportunitiesError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<UserProfile>(mockProfile);
-  const [savedIds, setSavedIds] = useState<string[]>(['1', '3', '4']);
-  const [notifications, setNotifications] = useState<AppNotification[]>(mockNotifications);
-  const [applications, setApplications] = useState<ApplicationRecord[]>(mockApplications);
-  const [adminListings, setAdminListings] = useState<AdminListing[]>(mockAdminListings);
-  const [adminSummary, setAdminSummary] = useState<AdminSummary>(mockAdminSummary);
+  const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [applications, setApplications] = useState<ApplicationRecord[]>([]);
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [reminders, setReminders] = useState<DeadlineReminderRecord[]>([]);
   const [exploreFilters, setExploreFiltersState] =
     useState<OpportunityFilters>(defaultFilters);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadOpportunities = useCallback(async () => {
-    setOpportunitiesLoading(true);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const realtimeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshUserTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastProfileError = useRef<string | null>(null);
+  const userId = user?.id ?? null;
+
+  const profile = authProfile ?? emptyProfile;
+  const isSignedIn = Boolean(user);
+
+  const showToast = useCallback((message: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ id: Date.now(), message });
+    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      if (refreshUserTimer.current) clearTimeout(refreshUserTimer.current);
+    },
+    [],
+  );
+
+  // Surface a failed profile save without reverting the optimistic edit.
+  useEffect(() => {
+    if (profileSaveError && profileSaveError !== lastProfileError.current) {
+      lastProfileError.current = profileSaveError;
+      showToast(profileSaveError);
+    }
+    if (!profileSaveError) lastProfileError.current = null;
+  }, [profileSaveError, showToast]);
+
+  /* --------------------------- opportunities --------------------------- */
+
+  const loadOpportunities = useCallback(async (silent = false) => {
+    if (!silent) setOpportunitiesLoading(true);
     setOpportunitiesError(null);
     try {
-      const data = await opportunityService.getOpportunities();
-      setOpportunities(data);
+      const data = await opportunityService.fetchPublishedOpportunities();
+      setRawOpportunities(data);
     } catch (error) {
-      setOpportunitiesError(
-        error instanceof Error ? error.message : 'Unable to load opportunities.',
-      );
+      setOpportunitiesError(errorMessage(error));
     } finally {
       setOpportunitiesLoading(false);
     }
@@ -98,30 +148,171 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void loadOpportunities();
   }, [loadOpportunities]);
 
-  useEffect(
-    () => () => {
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-    },
-    [],
+  const opportunities = useMemo(
+    () => withMatches(rawOpportunities, authProfile),
+    [rawOpportunities, authProfile],
   );
 
-  const showToast = useCallback((message: string) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ id: Date.now(), message });
-    toastTimer.current = setTimeout(() => setToast(null), 2800);
+  /* --------------------------- user data ------------------------------- */
+
+  const loadSavedIds = useCallback(async (id: string) => {
+    const ids = await bookmarkService.listBookmarkIds(id);
+    setSavedIds(ids);
   }, []);
+
+  const loadNotifications = useCallback(async (id: string) => {
+    const items = await notificationService.listNotifications(id);
+    setNotifications(items);
+  }, []);
+
+  const loadApplications = useCallback(async (id: string) => {
+    const items = await applicationService.listApplications(id);
+    setApplications(items);
+  }, []);
+
+  const loadSavedSearches = useCallback(async (id: string) => {
+    const items = await discoveryService.listSavedSearches(id);
+    setSavedSearches(items);
+  }, []);
+
+  const loadReminders = useCallback(async (id: string) => {
+    const items = await discoveryService.listReminders(id);
+    setReminders(items);
+  }, []);
+
+  const refreshUserData = useCallback(async () => {
+    if (!userId) {
+      setSavedIds([]);
+      setNotifications([]);
+      setApplications([]);
+      setSavedSearches([]);
+      setReminders([]);
+      return;
+    }
+    const results = await Promise.allSettled([
+      loadSavedIds(userId),
+      loadNotifications(userId),
+      loadApplications(userId),
+      loadSavedSearches(userId),
+      loadReminders(userId),
+    ]);
+    const failure = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (failure) console.warn('Could not refresh account data:', failure.reason);
+  }, [
+    userId,
+    loadSavedIds,
+    loadNotifications,
+    loadApplications,
+    loadSavedSearches,
+    loadReminders,
+  ]);
+
+  useEffect(() => {
+    void refreshUserData();
+  }, [refreshUserData]);
+
+  /* ----------------------------- realtime ------------------------------ */
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const scheduleOpportunities = () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      realtimeTimer.current = setTimeout(() => void loadOpportunities(true), 500);
+    };
+    const scheduleUserData = () => {
+      if (!userId) return;
+      if (refreshUserTimer.current) clearTimeout(refreshUserTimer.current);
+      refreshUserTimer.current = setTimeout(() => void refreshUserData(), 500);
+    };
+
+    const channel = supabase
+      .channel('nextstep-live')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'opportunities' },
+        scheduleOpportunities,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        scheduleUserData,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'applications' },
+        scheduleUserData,
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organizations' },
+        scheduleOpportunities,
+      )
+      .subscribe((status) => {
+        // Realtime is an enhancement: a blocked WebSocket (offline, corporate
+        // proxy) must not surface as an unhandled rejection. Pull-to-refresh
+        // and the AppState listener still keep data current.
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime connection unavailable:', status);
+        }
+      });
+
+    return () => {
+      if (realtimeTimer.current) clearTimeout(realtimeTimer.current);
+      if (refreshUserTimer.current) clearTimeout(refreshUserTimer.current);
+      void supabase?.removeChannel(channel);
+    };
+  }, [userId, loadOpportunities, refreshUserData]);
+
+  // Refresh when the app comes back to the foreground.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      void loadOpportunities(true);
+      void refreshUserData();
+    });
+    return () => subscription.remove();
+  }, [loadOpportunities, refreshUserData]);
+
+  /* ----------------------------- actions ------------------------------- */
+
+  const updateProfile = useCallback(
+    (patch: Partial<UserProfile>) => {
+      if (!isSignedIn) {
+        showToast('Sign in to save profile changes.');
+        return;
+      }
+      persistProfile(patch);
+    },
+    [isSignedIn, persistProfile, showToast],
+  );
 
   const isSaved = useCallback((id: string) => savedIds.includes(id), [savedIds]);
 
   const toggleSaved = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      if (!userId) {
+        showToast('Sign in to save opportunities.');
+        return;
+      }
       const exists = savedIds.includes(id);
       setSavedIds((current) =>
         exists ? current.filter((item) => item !== id) : [...current, id],
       );
-      showToast(exists ? 'Removed from saved' : 'Saved for later');
+      try {
+        if (exists) await bookmarkService.removeBookmark(userId, id);
+        else await bookmarkService.addBookmark(userId, id);
+        showToast(exists ? 'Removed from saved' : 'Saved for later');
+      } catch (error) {
+        setSavedIds((current) =>
+          exists ? [...current, id] : current.filter((item) => item !== id),
+        );
+        showToast(errorMessage(error));
+      }
     },
-    [savedIds, showToast],
+    [savedIds, showToast, userId],
   );
 
   const savedOpportunities = useMemo(
@@ -134,119 +325,160 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [notifications],
   );
 
-  const markAllRead = useCallback(() => {
+  const markAllRead = useCallback(async () => {
+    if (!userId) return;
     setNotifications((current) =>
       current.map((notification) => ({ ...notification, unread: false })),
     );
-  }, []);
+    try {
+      await notificationService.markAllNotificationsRead(userId);
+    } catch (error) {
+      showToast(errorMessage(error));
+      await loadNotifications(userId);
+    }
+  }, [userId, showToast, loadNotifications]);
 
-  const markNotificationRead = useCallback((id: string) => {
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.id === id ? { ...notification, unread: false } : notification,
-      ),
-    );
-  }, []);
-
-  const updateProfile = useCallback((patch: Partial<UserProfile>) => {
-    setProfile((current) => ({
-      ...current,
-      ...patch,
-      preferences: patch.preferences
-        ? { ...current.preferences, ...patch.preferences }
-        : current.preferences,
-      notificationPreferences: patch.notificationPreferences
-        ? { ...current.notificationPreferences, ...patch.notificationPreferences }
-        : current.notificationPreferences,
-    }));
-  }, []);
+  const markNotificationRead = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === id ? { ...notification, unread: false } : notification,
+        ),
+      );
+      try {
+        await notificationService.markNotificationRead(userId, id);
+      } catch (error) {
+        showToast(errorMessage(error));
+      }
+    },
+    [userId, showToast],
+  );
 
   const updateApplicationStatus = useCallback(
-    (id: string, status: ApplicationStatus) => {
-      setApplications((current) =>
-        applicationService.updateApplicationStatus(current, id, status),
-      );
+    async (id: string, status: ApplicationStatus) => {
+      if (!userId) {
+        showToast('Sign in to update your applications.');
+        return;
+      }
+      try {
+        const updated = await applicationService.updateApplication(userId, id, status);
+        setApplications((current) =>
+          current.map((record) => (record.id === id ? updated : record)),
+        );
+        showToast(`Marked as ${status.toLowerCase()}`);
+      } catch (error) {
+        showToast(errorMessage(error));
+      }
     },
-    [],
+    [userId, showToast],
   );
 
   const addApplication = useCallback(
-    (opportunityId: string) => {
-      setApplications((current) =>
-        applicationService.addApplicationRecord(current, opportunityId),
+    async (opportunityId: string) => {
+      if (!userId) {
+        showToast('Sign in to track applications.');
+        return;
+      }
+      try {
+        const created = await applicationService.createApplication(
+          userId,
+          opportunityId,
+        );
+        setApplications((current) => {
+          const exists = current.some((record) => record.id === created.id);
+          return exists
+            ? current.map((record) => (record.id === created.id ? created : record))
+            : [created, ...current];
+        });
+        showToast(
+          created.status === 'Interested'
+            ? 'Added to your application tracker'
+            : 'Application updated',
+        );
+      } catch (error) {
+        showToast(errorMessage(error));
+      }
+    },
+    [userId, showToast],
+  );
+
+  const createSavedSearch = useCallback(
+    async (name: string, query: string) => {
+      if (!userId) {
+        showToast('Sign in to save searches.');
+        return;
+      }
+      try {
+        const created = await discoveryService.createSavedSearch(
+          userId,
+          name,
+          query,
+          exploreFilters,
+        );
+        setSavedSearches((current) => [created, ...current]);
+        showToast('Search saved');
+      } catch (error) {
+        showToast(errorMessage(error));
+      }
+    },
+    [userId, exploreFilters, showToast],
+  );
+
+  const deleteSavedSearch = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      const previous = savedSearches;
+      setSavedSearches((current) => current.filter((item) => item.id !== id));
+      try {
+        await discoveryService.deleteSavedSearch(userId, id);
+      } catch (error) {
+        setSavedSearches(previous);
+        showToast(errorMessage(error));
+      }
+    },
+    [userId, savedSearches, showToast],
+  );
+
+  const setReminder = useCallback(
+    async (opportunityId: string, daysBefore = 7) => {
+      if (!userId) {
+        showToast('Sign in to set reminders.');
+        return;
+      }
+      try {
+        const reminder = await discoveryService.setReminder(
+          opportunityId,
+          daysBefore,
+        );
+        setReminders((current) => [
+          reminder,
+          ...current.filter((item) => item.opportunityId !== opportunityId),
+        ]);
+        showToast(`Reminder set for ${daysBefore} days before closing`);
+      } catch (error) {
+        showToast(errorMessage(error));
+      }
+    },
+    [userId, showToast],
+  );
+
+  const removeReminder = useCallback(
+    async (opportunityId: string) => {
+      if (!userId) return;
+      const previous = reminders;
+      setReminders((current) =>
+        current.filter((item) => item.opportunityId !== opportunityId),
       );
-      showToast('Added to your application tracker');
+      try {
+        await discoveryService.removeReminder(userId, opportunityId);
+        showToast('Reminder removed');
+      } catch (error) {
+        setReminders(previous);
+        showToast(errorMessage(error));
+      }
     },
-    [showToast],
-  );
-
-  const adminAttention = useMemo(
-    () =>
-      adminListings.filter((listing) => {
-        const daysAgo = -daysUntil(listing.sourceChecked);
-        return daysAgo > adminAttentionThresholdDays;
-      }),
-    [adminListings],
-  );
-
-  const saveAdminListing = useCallback(
-    (listing: AdminListing, mode: 'draft' | 'publish') => {
-      const existing = adminListings.find((item) => item.id === listing.id);
-      const publish = mode === 'publish';
-      const nextStatus = publish ? 'Published' : 'Draft';
-
-      setAdminListings((current) => {
-        const found = current.find((item) => item.id === listing.id);
-        if (found) {
-          return current.map((item) =>
-            item.id === listing.id ? { ...listing, status: nextStatus } : item,
-          );
-        }
-        return [{ ...listing, status: nextStatus }, ...current];
-      });
-
-      setAdminSummary((current) => {
-        if (!existing) {
-          return {
-            ...current,
-            active: publish ? current.active + 1 : current.active,
-            drafts: publish ? current.drafts : current.drafts + 1,
-          };
-        }
-        if (existing.status === 'Draft' && publish) {
-          return {
-            ...current,
-            active: current.active + 1,
-            drafts: Math.max(0, current.drafts - 1),
-          };
-        }
-        if (existing.status !== 'Draft' && !publish) {
-          return {
-            ...current,
-            active: Math.max(0, current.active - 1),
-            drafts: current.drafts + 1,
-          };
-        }
-        return current;
-      });
-
-      showToast(publish ? 'Published (demo)' : 'Draft saved (demo)');
-    },
-    [adminListings, showToast],
-  );
-
-  const markSourceChecked = useCallback(
-    (id: string) => {
-      setAdminListings((current) =>
-        current.map((listing) =>
-          listing.id === id
-            ? { ...listing, sourceChecked: new Date().toISOString() }
-            : listing,
-        ),
-      );
-      showToast('Source marked as checked');
-    },
-    [showToast],
+    [userId, reminders, showToast],
   );
 
   const setExploreFilters = useCallback((filters: OpportunityFilters) => {
@@ -262,8 +494,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       opportunities,
       opportunitiesLoading,
       opportunitiesError,
-      reloadOpportunities: loadOpportunities,
+      reloadOpportunities: () => loadOpportunities(),
       profile,
+      isSignedIn,
       updateProfile,
       savedIds,
       savedOpportunities,
@@ -276,11 +509,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applications,
       updateApplicationStatus,
       addApplication,
-      adminListings,
-      adminSummary,
-      adminAttention,
-      saveAdminListing,
-      markSourceChecked,
+      savedSearches,
+      createSavedSearch,
+      deleteSavedSearch,
+      reminders,
+      setReminder,
+      removeReminder,
+      refreshUserData,
       exploreFilters,
       setExploreFilters,
       resetExploreFilters,
@@ -293,6 +528,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       opportunitiesError,
       loadOpportunities,
       profile,
+      isSignedIn,
       updateProfile,
       savedIds,
       savedOpportunities,
@@ -305,11 +541,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applications,
       updateApplicationStatus,
       addApplication,
-      adminListings,
-      adminSummary,
-      adminAttention,
-      saveAdminListing,
-      markSourceChecked,
+      savedSearches,
+      createSavedSearch,
+      deleteSavedSearch,
+      reminders,
+      setReminder,
+      removeReminder,
+      refreshUserData,
       exploreFilters,
       setExploreFilters,
       resetExploreFilters,

@@ -1,12 +1,11 @@
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
-import { SectionHeader } from '@/components/SectionHeader';
 import { colors, radius, spacing, type } from '@/constants/theme';
 import { useApp } from '@/state/AppProvider';
 import type { ApplicationStatus } from '@/types';
@@ -14,33 +13,31 @@ import { APPLICATION_STATUSES } from '@/types';
 
 const statusHints: Record<ApplicationStatus, string> = {
   Interested: 'You spotted this and want to keep an eye on it.',
-  Preparing: 'You are gathering documents or drafting responses.',
-  Applied: 'Your application has been sent via the official channel.',
+  Applied: 'Your application has been sent through the official channel.',
+  Shortlisted: 'You made the shortlist — prepare for the next stage.',
   Interview: 'An interview or selection stage is under way.',
-  Outcome: 'A decision has been recorded for this demo entry.',
+  Offered: 'An offer has been made. Congratulations!',
+  Rejected: 'This one did not work out. Keep going.',
+  Withdrawn: 'You withdrew from this application.',
 };
 
 export default function ApplicationsScreen() {
   const router = useRouter();
-  const {
-    applications,
-    opportunities,
-    updateApplicationStatus,
-    showToast,
-  } = useApp();
+  const { applications, opportunities, updateApplicationStatus, isSignedIn } =
+    useApp();
 
-  const records = applications
-    .map((application) => ({
-      application,
-      opportunity: opportunities.find((item) => item.id === application.opportunityId),
-    }))
-    .filter((entry) => entry.opportunity);
+  const records = applications.map((application) => ({
+    application,
+    opportunity: opportunities.find(
+      (item) => item.id === application.opportunityId,
+    ),
+  }));
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Application tracker"
-        subtitle="Progress is stored locally — demo only"
+        subtitle="Follow each application from interested to outcome"
         onBack={() => router.back()}
       />
 
@@ -48,49 +45,62 @@ export default function ApplicationsScreen() {
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="clipboard"
-            title="Nothing tracked yet"
-            message="Open any opportunity and tap “Track this application” to start following it here."
-            actionLabel="Explore opportunities"
-            onAction={() => router.push('/explore')}
+            title={isSignedIn ? 'Nothing tracked yet' : 'Sign in to track applications'}
+            message={
+              isSignedIn
+                ? 'Open any opportunity and tap “Track this application” to follow it here.'
+                : 'Sign in to keep a record of every opportunity you apply for.'
+            }
+            actionLabel={isSignedIn ? 'Explore opportunities' : 'Sign in'}
+            onAction={() => router.push(isSignedIn ? '/explore' : '/auth')}
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {records.map(({ application, opportunity }) => (
             <View key={application.id} style={styles.card}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Open ${opportunity?.title}`}
-                onPress={() => router.push(`/opportunity/${opportunity?.id}`)}
+                accessibilityLabel={`Open ${application.opportunityTitle ?? opportunity?.title ?? 'opportunity'}`}
+                onPress={() => router.push(`/opportunity/${application.opportunityId}`)}
                 style={({ pressed }) => [styles.summaryRow, pressed && styles.pressed]}
               >
                 <View style={styles.summaryCopy}>
-                  <Text style={styles.title}>{opportunity?.title}</Text>
-                  <Text style={styles.organisation}>{opportunity?.organisation}</Text>
+                  <Text style={styles.title}>
+                    {application.opportunityTitle ??
+                      opportunity?.title ??
+                      'Opportunity'}
+                  </Text>
+                  <Text style={styles.organisation}>
+                    {application.opportunityOrganisation ??
+                      opportunity?.organisation ??
+                      ''}
+                  </Text>
                   <Text style={styles.updated}>Updated {application.updatedAt}</Text>
                 </View>
                 <Feather name="chevron-right" size={19} color={colors.muted} />
               </Pressable>
 
               <View style={styles.statusRow}>
-                {APPLICATION_STATUSES.map((status) => (
-                  <Chip
-                    key={status}
-                    label={status}
-                    active={application.status === status}
-                    onPress={() => {
-                      updateApplicationStatus(application.id, status);
-                      // No data leaves the device in this demo.
-                      showToast(`Marked as ${status.toLowerCase()} (demo)`);
-                    }}
-                  />
-                ))}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {APPLICATION_STATUSES.map((status) => (
+                    <Chip
+                      key={status}
+                      label={status}
+                      active={application.status === status}
+                      onPress={() => void updateApplicationStatus(application.id, status)}
+                    />
+                  ))}
+                </ScrollView>
               </View>
 
               <Text style={styles.statusHint}>{statusHints[application.status]}</Text>
             </View>
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );

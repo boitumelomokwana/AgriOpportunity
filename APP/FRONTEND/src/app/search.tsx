@@ -9,8 +9,8 @@ import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { OpportunityCard } from '@/components/OpportunityCard';
 import { SectionHeader } from '@/components/SectionHeader';
+import { recentSearchSuggestions } from '@/constants/categories';
 import { colors, radius, spacing, type } from '@/constants/theme';
-import { recentSearches } from '@/data/opportunities';
 import { filterOpportunities, sortOpportunities, defaultFilters } from '@/services/opportunityService';
 import { useApp } from '@/state/AppProvider';
 import { pluralise } from '@/utils/format';
@@ -25,6 +25,8 @@ export default function SearchScreen() {
     setExploreFilters,
     isSaved,
     toggleSaved,
+    isSignedIn,
+    createSavedSearch,
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -38,13 +40,13 @@ export default function SearchScreen() {
   const results = useMemo(
     () =>
       sortOpportunities(
-        filterOpportunities(opportunities, { ...exploreFilters, openOnly: false, hideExpired: false }, query),
+        filterOpportunities(opportunities, { ...exploreFilters, openOnly: false }, query),
         'Best match',
       ),
     [opportunities, exploreFilters, query],
   );
 
-  const suggestions = recentSearches;
+  const suggestions = recentSearchSuggestions;
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
@@ -75,18 +77,33 @@ export default function SearchScreen() {
       </View>
 
       {query.trim().length === 0 ? (
-        <SectionHeader title="Try searching for" subtitle="Popular demo searches" />
+        <SectionHeader title="Try searching for" subtitle="Popular searches" />
       ) : (
-        <Text style={styles.resultCount}>
-          {results.length} {pluralise(results.length, 'result')} for “{query.trim()}”
-        </Text>
+        <View style={styles.resultRow}>
+          <Text style={styles.resultCount}>
+            {results.length} {pluralise(results.length, 'result')} for “{query.trim()}”
+          </Text>
+          {isSignedIn ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void createSavedSearch(query.trim(), query.trim())}
+              hitSlop={6}
+              style={({ pressed }) => [styles.saveSearch, pressed && styles.pressed]}
+            >
+              <Feather name="bookmark" size={13} color={colors.teal700} />
+              <Text style={styles.saveSearchText}>Save search</Text>
+            </Pressable>
+          ) : null}
+        </View>
       )}
 
       {query.trim().length === 0 ? (
         <View style={styles.suggestionRow}>
-          {suggestions.map((suggestion) => (
-            <Chip key={suggestion} label={suggestion} icon="search" onPress={() => setQuery(suggestion)} />
-          ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {suggestions.map((suggestion) => (
+              <Chip key={suggestion} label={suggestion} icon="search" onPress={() => setQuery(suggestion)} />
+            ))}
+          </ScrollView>
         </View>
       ) : opportunitiesError ? (
         <EmptyState
@@ -154,6 +171,23 @@ const styles = StyleSheet.create({
     ...type.small,
     fontFamily: type.bodyStrong.fontFamily,
     color: colors.ink,
+    flex: 1,
+  },
+  resultRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  saveSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: spacing.sm,
+  },
+  saveSearchText: {
+    ...type.small,
+    color: colors.teal700,
+    fontWeight: '700',
   },
   suggestionRow: {
     flexDirection: 'row',

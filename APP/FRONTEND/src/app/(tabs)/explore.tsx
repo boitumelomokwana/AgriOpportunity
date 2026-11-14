@@ -7,8 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
 import { OpportunityCard } from '@/components/OpportunityCard';
+import { categoryChips } from '@/constants/categories';
 import { colors, fonts, radius, spacing, type } from '@/constants/theme';
-import { opportunityCategories } from '@/data/opportunities';
 import {
   filterOpportunities,
   sortOpportunities,
@@ -104,7 +104,7 @@ export default function ExploreScreen() {
           style={styles.categoryScroll}
           contentContainerStyle={styles.categoryRow}
         >
-          {opportunityCategories.map((category) => (
+          {categoryChips.map((category) => (
             <Chip
               key={category.category}
               label={category.label}

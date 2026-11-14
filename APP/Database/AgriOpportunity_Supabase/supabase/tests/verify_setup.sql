@@ -222,6 +222,156 @@ do $$ declare ok boolean := false; begin
   if not ok then raise exception 'FAIL: last super admin could be deleted'; end if;
 end $$;
 
+-- =====================================================================
+-- Added platform features (migrations 011-013)
+-- =====================================================================
+-- Fixture: one fresh published opportunity with a closing date soon.
+insert into public.opportunities
+  (title, provider, category, province, qualification, closing_date, description,
+   tags, sector, source_name, source_url, external_reference, status)
+values
+  ('Verification Solar Learnership', 'Test Agri Co', 'Learnership', 'Gauteng',
+   'Grade 12', current_date + 5,
+   'Practical solar installation training used by the verification test.',
+   array['solar', 'energy'], 'Energy', 'Test Agri Co',
+   'https://example.com/verify', 'VERIFY-1', 'published');
+
+do $$ begin
+  if (select search_vector from public.opportunities where external_reference = 'VERIFY-1') is null then
+    raise exception 'FAIL: search_vector was not populated';
+  end if;
+end $$;
+
+-- ---- student uses saved searches, matching, reports and reminders ----
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated"}', true);
+set local role authenticated;
+
+update public.profiles
+set interests = array['Internship','Learnership'],
+    field_of_study = 'Solar Energy',
+    qualification = 'Grade 12'
+where id = '00000000-0000-0000-0000-0000000000b1';
+
+do $$ declare v jsonb;
+begin
+  v := public.match_opportunity_score((select id from public.opportunities where external_reference = 'VERIFY-1'));
+  if (v ->> 'score')::int < 50 then raise exception 'FAIL: match score too low: %', v; end if;
+  if jsonb_array_length(v -> 'reasons') < 2 then raise exception 'FAIL: match score is not explained'; end if;
+  if not exists (select 1 from public.search_opportunities('solar')) then
+    raise exception 'FAIL: search_opportunities did not find the published row';
+  end if;
+  if not exists (select 1 from public.recommended_opportunities(10, 0, false)) then
+    raise exception 'FAIL: recommended_opportunities returned nothing';
+  end if;
+  if public.my_profile_completion() <= 0 then
+    raise exception 'FAIL: profile completion not computed';
+  end if;
+end $$;
+
+insert into public.saved_searches (user_id, name, query, filters)
+values ('00000000-0000-0000-0000-0000000000b1', 'My solar search', 'solar', '{"types":["Learnership"]}'::jsonb);
+
+insert into public.bookmarks (user_id, opportunity_id)
+select '00000000-0000-0000-0000-0000000000b1', id from public.opportunities where external_reference = 'VERIFY-1';
+
+insert into public.applications (user_id, opportunity_id, status, applied_at)
+select '00000000-0000-0000-0000-0000000000b1', id, 'applied', now()
+from public.opportunities where external_reference = 'VERIFY-1';
+
+update public.applications set status = 'interview'
+where user_id = '00000000-0000-0000-0000-0000000000b1';
+
+do $$ begin
+  if (select count(*) from public.application_status_history
+      where user_id = '00000000-0000-0000-0000-0000000000b1') <> 2 then
+    raise exception 'FAIL: application status history was not recorded';
+  end if;
+end $$;
+
+insert into public.opportunity_reports (opportunity_id, user_id, reason, details)
+select id, '00000000-0000-0000-0000-0000000000b1', 'incorrect_information', 'verify_setup report'
+from public.opportunities where external_reference = 'VERIFY-1';
+
+select public.set_deadline_reminder(
+  (select id from public.opportunities where external_reference = 'VERIFY-1'), 7);
+select public.record_opportunity_view(
+  (select id from public.opportunities where external_reference = 'VERIFY-1'), 'verify_setup');
+
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- ---- another student cannot read any of it ---------------------------
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b2","role":"authenticated"}', true);
+set local role authenticated;
+do $$ begin
+  if exists (select 1 from public.saved_searches) then
+    raise exception 'FAIL: student can read another student''s saved searches';
+  end if;
+  if exists (select 1 from public.application_status_history) then
+    raise exception 'FAIL: student can read another student''s application history';
+  end if;
+  if exists (select 1 from public.opportunity_reports) then
+    raise exception 'FAIL: student can read another student''s reports';
+  end if;
+  if exists (select 1 from public.deadline_reminders) then
+    raise exception 'FAIL: student can read another student''s reminders';
+  end if;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- ---- reminder job creates a deadline notification --------------------
+do $$ declare n int;
+begin
+  n := public.dispatch_deadline_reminders(100);
+  if n < 1 then raise exception 'FAIL: reminder job created no notifications'; end if;
+  if not exists (select 1 from public.notifications
+                 where user_id = '00000000-0000-0000-0000-0000000000b1'
+                   and type = 'deadline_reminder') then
+    raise exception 'FAIL: deadline notification missing';
+  end if;
+end $$;
+
+-- ---- admins resolve reports, verify companies and read analytics -----
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
+set local role authenticated;
+do $$ declare v jsonb;
+begin
+  perform public.review_report(
+    (select id from public.opportunity_reports where details = 'verify_setup report'),
+    'resolved', 'verified');
+  v := public.admin_analytics();
+  if (v ->> 'opportunities_published')::int < 1 then
+    raise exception 'FAIL: admin analytics did not count published opportunities';
+  end if;
+  perform public.opportunity_quality_report();
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}', true);
+set local role authenticated;
+do $$ begin
+  perform public.verify_organization(
+    (select id from public.organizations where name = 'Test Agri Co'), true);
+  if not (select is_verified from public.organizations where name = 'Test Agri Co') then
+    raise exception 'FAIL: content admin could not verify an organisation';
+  end if;
+end $$;
+reset role;
+select set_config('request.jwt.claims', '', true);
+
+-- ---- new tables have RLS enabled -------------------------------------
+do $$ declare missing text; begin
+  select string_agg(t, ', ') into missing
+  from unnest(array['saved_searches','opportunity_reports',
+                    'application_status_history','deadline_reminders']) t
+  where not exists (select 1 from pg_class c
+                    join pg_namespace n on n.oid = c.relnamespace
+                    where n.nspname = 'public' and c.relname = t and c.relrowsecurity);
+  if missing is not null then raise exception 'FAIL: RLS not enabled on: %', missing; end if;
+end $$;
+
 -- ---- realtime publication -------------------------------------------
 do $$ declare missing text; begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

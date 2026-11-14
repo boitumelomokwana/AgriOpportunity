@@ -1,11 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Brand } from '@/components/Brand';
 import { Button } from '@/components/Button';
 import { colors, radius, spacing, type } from '@/constants/theme';
+import { useAuth } from '@/state/AuthProvider';
 
 const points = [
   {
@@ -27,6 +29,11 @@ const points = [
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const { loading, session, configError } = useAuth();
+
+  useEffect(() => {
+    if (!loading && session) router.replace('/home');
+  }, [loading, session, router]);
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
@@ -38,12 +45,10 @@ export default function WelcomeScreen() {
 
         <View style={styles.hero}>
           <Text style={styles.kicker}>SOUTH AFRICA</Text>
-          <Text style={styles.heading}>
-            Your next step starts here
-          </Text>
+          <Text style={styles.heading}>Your next step starts here</Text>
           <Text style={styles.subheading}>
-            A demo marketplace built for young South Africans — browse, save
-            and track youth opportunities in one place.
+            Discover agriculture, skills and youth opportunities in one place —
+            then save, track and apply with confidence.
           </Text>
         </View>
 
@@ -61,6 +66,13 @@ export default function WelcomeScreen() {
           ))}
         </View>
 
+        {configError ? (
+          <View style={styles.configCard}>
+            <Feather name="alert-triangle" size={16} color={colors.red700} />
+            <Text style={styles.configText}>{configError}</Text>
+          </View>
+        ) : null}
+
         <View style={styles.actions}>
           <Button
             title="Get started"
@@ -71,10 +83,10 @@ export default function WelcomeScreen() {
             title="Explore opportunities first"
             variant="secondary"
             fullWidth
-            onPress={() => router.replace('/(tabs)')}
+            onPress={() => router.replace('/home')}
           />
           <Text style={styles.demoNote}>
-            Demo app · uses illustrative sample data only
+            Sign in to save opportunities, set reminders and track applications.
           </Text>
         </View>
       </View>
@@ -160,6 +172,20 @@ const styles = StyleSheet.create({
   },
   pointBody: {
     ...type.small,
+  },
+  configCard: {
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.red50,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+  },
+  configText: {
+    ...type.small,
+    color: colors.red700,
+    flex: 1,
   },
   actions: {
     marginTop: 'auto',

@@ -10,6 +10,8 @@ export const mockNotifications: AppNotification[] = [
     unread: true,
     icon: 'star',
     target: '/matches',
+    createdAt: new Date().toISOString(),
+    type: 'new_opportunity',
   },
   {
     id: 'n2',
@@ -20,6 +22,8 @@ export const mockNotifications: AppNotification[] = [
     unread: true,
     icon: 'clock',
     target: '/opportunity/3',
+    createdAt: new Date().toISOString(),
+    type: 'closing_soon',
   },
   {
     id: 'n3',
@@ -30,5 +34,7 @@ export const mockNotifications: AppNotification[] = [
     unread: false,
     icon: 'bookmark',
     target: '/saved',
+    createdAt: new Date().toISOString(),
+    type: 'system',
   },
 ];

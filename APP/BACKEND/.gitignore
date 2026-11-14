@@ -1,0 +1,6 @@
+# Local backend files
+node_modules/
+.env
+data/
+dist/
+npm-debug.log*

@@ -1,18 +1,35 @@
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 
 import { AppHeader } from '@/components/AppHeader';
 import { Button } from '@/components/Button';
+import { Chip } from '@/components/Chip';
 import { EmptyState } from '@/components/EmptyState';
+import { FormField } from '@/components/FormField';
 import { SectionHeader } from '@/components/SectionHeader';
 import { colors, radius, spacing, type } from '@/constants/theme';
+import { errorMessage } from '@/lib/errors';
+import {
+  computeMatch,
+  opportunityService,
+} from '@/services/opportunityService';
+import { discoveryService } from '@/services/discoveryService';
+import { useAuth } from '@/state/AuthProvider';
 import { useApp } from '@/state/AppProvider';
-import type { IconName } from '@/types';
+import type { IconName, Opportunity, ReportReason } from '@/types';
 import { closingLabel, closingTone, matchLabel } from '@/utils/format';
+
+const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: 'expired', label: 'Expired' },
+  { value: 'incorrect_information', label: 'Incorrect info' },
+  { value: 'broken_link', label: 'Broken link' },
+  { value: 'scam', label: 'Looks like a scam' },
+  { value: 'other', label: 'Other' },
+];
 
 function MetaItem({ icon, text }: { icon: IconName; text: string }) {
   return (
@@ -26,13 +43,85 @@ function MetaItem({ icon, text }: { icon: IconName; text: string }) {
 export default function OpportunityDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { opportunities, isSaved, toggleSaved, applications, addApplication, showToast } =
-    useApp();
+  const { user } = useAuth();
+  const {
+    opportunities,
+    profile,
+    isSignedIn,
+    isSaved,
+    toggleSaved,
+    applications,
+    addApplication,
+    reminders,
+    setReminder,
+    removeReminder,
+    showToast,
+  } = useApp();
 
-  const opportunity = useMemo(
+  const fromList = useMemo(
     () => opportunities.find((item) => item.id === id),
     [opportunities, id],
   );
+  const [fetched, setFetched] = useState<Opportunity | null>(null);
+  const [loading, setLoading] = useState(!fromList);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<ReportReason>('incorrect_information');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const viewRecorded = useRef(false);
+
+  useEffect(() => {
+    if (fromList) {
+      setFetched(null);
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+    if (!id) return;
+    let active = true;
+    setLoading(true);
+    setLoadError(null);
+    void opportunityService
+      .fetchOpportunityById(id)
+      .then((result) => {
+        if (!active) return;
+        setFetched(result);
+        if (!result) setLoadError('This opportunity could not be found.');
+      })
+      .catch((error) => {
+        if (active) setLoadError(errorMessage(error));
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, fromList]);
+
+  const opportunity = fromList ?? fetched;
+  const match = useMemo(
+    () => (opportunity ? computeMatch(opportunity, profile) : null),
+    [opportunity, profile],
+  );
+
+  useEffect(() => {
+    if (!opportunity || viewRecorded.current) return;
+    viewRecorded.current = true;
+    void opportunityService.recordOpportunityView(opportunity.id, 'app_detail');
+  }, [opportunity]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
+        <AppHeader onBack={() => router.back()} />
+        <View style={styles.emptyWrap}>
+          <Text style={styles.loadingText}>Loading opportunity…</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!opportunity) {
     return (
@@ -42,7 +131,7 @@ export default function OpportunityDetailScreen() {
           <EmptyState
             icon="alert-circle"
             title="Opportunity unavailable"
-            message="This illustrative listing could not be found. It may have been removed from the demo data."
+            message={loadError ?? 'This listing may have been removed or is awaiting review.'}
             actionLabel="Back to explore"
             onAction={() => router.replace('/explore')}
           />
@@ -55,11 +144,52 @@ export default function OpportunityDetailScreen() {
   const application = applications.find(
     (record) => record.opportunityId === opportunity.id,
   );
+  const reminder = reminders.find(
+    (record) => record.opportunityId === opportunity.id,
+  );
   const tone = closingTone(opportunity);
   const expired = Boolean(opportunity.isExpired);
+  const score = match?.score ?? opportunity.match;
+  const reasons = match?.reasons ?? opportunity.matchReasons ?? [];
+  const applyUrl = opportunity.applicationUrl || opportunity.sourceUrl;
 
   const openSource = async () => {
-    await WebBrowser.openBrowserAsync(opportunity.sourceUrl);
+    if (!applyUrl) {
+      showToast('No application link was provided for this listing.');
+      return;
+    }
+    // Legacy listings sometimes store "www.example.co.za" without a scheme.
+    const url = /^[a-z][a-z0-9+.-]*:\/\//i.test(applyUrl)
+      ? applyUrl
+      : `https://${applyUrl}`;
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch {
+      showToast('That link could not be opened on this device.');
+    }
+  };
+
+  const submitReport = async () => {
+    if (!user) {
+      showToast('Sign in to report a listing.');
+      return;
+    }
+    setSubmittingReport(true);
+    try {
+      await discoveryService.reportOpportunity(
+        user.id,
+        opportunity.id,
+        reportReason,
+        reportDetails,
+      );
+      setShowReport(false);
+      setReportDetails('');
+      showToast('Thanks — a moderator will review this listing.');
+    } catch (error) {
+      showToast(errorMessage(error));
+    } finally {
+      setSubmittingReport(false);
+    }
   };
 
   return (
@@ -70,7 +200,7 @@ export default function OpportunityDetailScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={saved ? 'Remove from saved' : 'Save opportunity'}
-            onPress={() => toggleSaved(opportunity.id)}
+            onPress={() => void toggleSaved(opportunity.id)}
             hitSlop={8}
             style={({ pressed }) => [
               styles.saveButton,
@@ -112,14 +242,22 @@ export default function OpportunityDetailScreen() {
             )}
           </View>
           <Text style={styles.title}>{opportunity.title}</Text>
-          <Text style={styles.organisation}>{opportunity.organisation}</Text>
+          <View style={styles.organisationRow}>
+            <Text style={styles.organisation}>{opportunity.organisation}</Text>
+            {opportunity.organizationVerified ? (
+              <View style={styles.verifiedPill}>
+                <Feather name="check-circle" size={11} color={colors.teal700} />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            ) : null}
+          </View>
           {!expired ? (
             <View style={styles.matchRow}>
               <View style={styles.matchPill}>
                 <Feather name="target" size={13} color={colors.navy800} />
-                <Text style={styles.matchText}>{opportunity.match}% match</Text>
+                <Text style={styles.matchText}>{score}% match</Text>
               </View>
-              <Text style={styles.matchLabel}>{matchLabel(opportunity.match)}</Text>
+              <Text style={styles.matchLabel}>{matchLabel(score)}</Text>
             </View>
           ) : null}
           <View style={styles.metaGrid}>
@@ -134,6 +272,25 @@ export default function OpportunityDetailScreen() {
           <Text style={styles.summaryHeading}>About this opportunity</Text>
           <Text style={styles.summaryBody}>{opportunity.summary}</Text>
         </View>
+
+        {reasons.length > 0 ? (
+          <>
+            <SectionHeader
+              title="Why this matched"
+              subtitle="Every point is explained"
+            />
+            <View style={styles.listCard}>
+              {reasons.map((reason) => (
+                <View key={reason} style={styles.listRow}>
+                  <View style={styles.bullet}>
+                    <Feather name="target" size={13} color={colors.teal700} />
+                  </View>
+                  <Text style={styles.listText}>{reason}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
 
         <SectionHeader title="Eligibility" subtitle="Check every requirement before applying" />
         <View style={styles.listCard}>
@@ -151,7 +308,8 @@ export default function OpportunityDetailScreen() {
         <View style={styles.listCard}>
           {opportunity.documents.length === 0 ? (
             <Text style={styles.listText}>
-              No documents listed for this illustrative entry.
+              The provider has not listed specific documents. Check the official
+              application page for the exact requirements.
             </Text>
           ) : (
             opportunity.documents.map((document) => (
@@ -165,7 +323,7 @@ export default function OpportunityDetailScreen() {
           )}
         </View>
 
-        <SectionHeader title="How to apply" subtitle="Steps you can follow locally" />
+        <SectionHeader title="How to apply" subtitle="Follow the official steps" />
         <View style={styles.listCard}>
           {opportunity.howToApply.map((step, index) => (
             <View key={step} style={styles.listRow}>
@@ -187,7 +345,7 @@ export default function OpportunityDetailScreen() {
           </View>
           <View style={styles.gridColumn}>
             <Text style={styles.gridLabel}>Applications</Text>
-            <Text style={styles.gridValue}>{expired ? 'Closed (demo)' : 'Open (demo)'}</Text>
+            <Text style={styles.gridValue}>{expired ? 'Closed' : 'Open'}</Text>
           </View>
           <View style={styles.gridColumn}>
             <Text style={styles.gridLabel}>Source updated</Text>
@@ -195,19 +353,21 @@ export default function OpportunityDetailScreen() {
           </View>
         </View>
 
-        <SectionHeader title="Where this came from" subtitle="Demo data provenance" />
+        <SectionHeader title="Where this came from" subtitle="Listing provenance" />
         <View style={styles.sourceCard}>
           <View style={styles.sourceRow}>
             <Feather name="external-link" size={16} color={colors.teal700} />
             <Text style={styles.sourceName}>{opportunity.sourceName}</Text>
           </View>
-          <Text style={styles.sourceText}>{opportunity.sourceUrl}</Text>
+          <Text style={styles.sourceText}>
+            {opportunity.sourceUrl || 'No source link supplied'}
+          </Text>
         </View>
 
         <View style={styles.actions}>
           {expired ? (
             <Button
-              title="Demo: this listing has closed"
+              title="This listing has closed"
               variant="secondary"
               icon="clock"
               fullWidth
@@ -225,7 +385,7 @@ export default function OpportunityDetailScreen() {
               title="Track this application"
               icon="clipboard"
               fullWidth
-              onPress={() => addApplication(opportunity.id)}
+              onPress={() => void addApplication(opportunity.id)}
             />
           )}
           {!expired ? (
@@ -237,18 +397,82 @@ export default function OpportunityDetailScreen() {
               onPress={() => void openSource()}
             />
           ) : null}
+          {!expired ? (
+            <Button
+              title={
+                reminder
+                  ? `Reminder set (${reminder.daysBefore} days before)`
+                  : 'Remind me before it closes'
+              }
+              variant={reminder ? 'secondary' : 'text'}
+              icon="bell"
+              fullWidth
+              onPress={() =>
+                void (reminder
+                  ? removeReminder(opportunity.id)
+                  : setReminder(opportunity.id, 7))
+              }
+            />
+          ) : null}
           <Button
             title={saved ? 'Remove from saved' : 'Save for later'}
             variant={saved ? 'secondary' : 'text'}
             icon="bookmark"
             fullWidth
-            onPress={() => toggleSaved(opportunity.id)}
+            onPress={() => void toggleSaved(opportunity.id)}
           />
-          <Text style={styles.demoNote}>
-            Frontend demo — no application is sent to any organisation. Tracking
-            only records progress on this device.
-          </Text>
         </View>
+
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            if (!isSignedIn) {
+              showToast('Sign in to report a listing.');
+              return;
+            }
+            setShowReport((current) => !current);
+          }}
+          style={({ pressed }) => [styles.reportLink, pressed && styles.pressed]}
+        >
+          <Feather name="flag" size={14} color={colors.muted} />
+          <Text style={styles.reportLinkText}>Report incorrect or expired listing</Text>
+        </Pressable>
+
+        {showReport ? (
+          <View style={styles.reportCard}>
+            <Text style={styles.reportTitle}>What is wrong?</Text>
+            <View style={styles.reportChips}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {REPORT_REASONS.map((reason) => (
+                  <Chip
+                    key={reason.value}
+                    label={reason.label}
+                    active={reportReason === reason.value}
+                    onPress={() => setReportReason(reason.value)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+            <FormField
+              label="Details (optional)"
+              value={reportDetails}
+              onChangeText={setReportDetails}
+              placeholder="Tell us what you noticed"
+              multiline
+              maxLength={1000}
+            />
+            <Button
+              title="Submit report"
+              loading={submittingReport}
+              onPress={() => void submitReport()}
+            />
+          </View>
+        ) : null}
+
+        <Text style={styles.footerNote}>
+          Always confirm requirements and deadlines on the official listing.
+          AgriOpportunities does not submit applications on your behalf.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -264,6 +488,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.xxxl,
+  },
+  loadingText: {
+    ...type.body,
+    color: colors.muted,
+    textAlign: 'center',
   },
   saveButton: {
     width: 40,
@@ -340,9 +569,29 @@ const styles = StyleSheet.create({
     ...type.h1,
     fontSize: 25,
   },
+  organisationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   organisation: {
     ...type.body,
     color: colors.muted,
+  },
+  verifiedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.teal50,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  verifiedText: {
+    ...type.caption,
+    color: colors.teal700,
+    fontWeight: '700',
   },
   matchRow: {
     flexDirection: 'row',
@@ -491,9 +740,39 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxl,
     gap: spacing.md,
   },
-  demoNote: {
+  reportLink: {
+    marginTop: spacing.xl,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  reportLinkText: {
+    ...type.caption,
+    color: colors.muted,
+    textDecorationLine: 'underline',
+  },
+  reportCard: {
+    marginTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  reportTitle: {
+    ...type.bodyStrong,
+  },
+  reportChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  footerNote: {
     ...type.caption,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xl,
   },
 });

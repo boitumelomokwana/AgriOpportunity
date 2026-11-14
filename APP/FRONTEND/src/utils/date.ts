@@ -59,13 +59,32 @@ export function daysFromNow(days: number): string {
 }
 
 export function daysUntil(value: string): number {
-  const diff = startOfDay(value).getTime() - startOfDay(new Date()).getTime();
+  if (!value) return Number.POSITIVE_INFINITY;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return Number.POSITIVE_INFINITY;
+  const diff = startOfDay(parsed).getTime() - startOfDay(new Date()).getTime();
   return Math.round(diff / 86_400_000);
 }
 
 export function formatShortDate(value: string | Date): string {
   const date = toDate(value);
+  if (Number.isNaN(date.getTime())) return '';
   return `${date.getDate().toString().padStart(2, '0')} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+export function formatRelativeTime(value: string | Date): string {
+  const date = toDate(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return formatShortDate(date);
 }
 
 export function formatDayMonth(value: string | Date): string {

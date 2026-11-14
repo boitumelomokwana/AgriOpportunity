@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -16,7 +16,7 @@ export default function SavedScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Saved"
-        subtitle={`${savedOpportunities.length} kept for later · stored locally`}
+        subtitle={`${savedOpportunities.length} kept for later · synced to your account`}
       />
       {savedOpportunities.length === 0 ? (
         <View style={styles.emptyWrap}>
@@ -29,7 +29,10 @@ export default function SavedScreen() {
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {savedOpportunities.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
@@ -39,7 +42,7 @@ export default function SavedScreen() {
               onOpen={() => router.push(`/opportunity/${opportunity.id}`)}
             />
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );

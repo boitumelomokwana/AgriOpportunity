@@ -1,0 +1,598 @@
+{
+  "APP/Database/AgriOpportunity_Database/AgriOpportunity_Database/src/lib/db-types.ts": {
+    "mtime": 1794403518.1043577,
+    "seen": 1794422756.512875,
+    "ast_hash": "a6d3c93ab4dbfa24d9901d122a7bdb99",
+    "semantic_hash": "a6d3c93ab4dbfa24d9901d122a7bdb99"
+  },
+  "APP/Database/AgriOpportunity_Database/AgriOpportunity_Database/src/lib/supabase.ts": {
+    "mtime": 1794403518.11361,
+    "seen": 1794422756.512875,
+    "ast_hash": "610b834227af8d9edf64071d66c50d30",
+    "semantic_hash": "610b834227af8d9edf64071d66c50d30"
+  },
+  "APP/Database/AgriOpportunity_Database/AgriOpportunity_Database/src/lib/supabaseAdmin.ts": {
+    "mtime": 1794403518.120976,
+    "seen": 1794422756.5285885,
+    "ast_hash": "f71645926f44f83aea02022d87ca1056",
+    "semantic_hash": "f71645926f44f83aea02022d87ca1056"
+  },
+  "APP/Database/AgriOpportunity_Database/AgriOpportunity_Database/supabase/schema.sql": {
+    "mtime": 1794403518.1376057,
+    "seen": 1794422756.5285885,
+    "ast_hash": "62ae6706521abce5f03ff7202e493292",
+    "semantic_hash": "62ae6706521abce5f03ff7202e493292"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/001_user_management.sql": {
+    "mtime": 1794403518.171055,
+    "seen": 1794422756.5285885,
+    "ast_hash": "74686f38e42ea85dea0705fbb3be5d08",
+    "semantic_hash": "74686f38e42ea85dea0705fbb3be5d08"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/002_company_management.sql": {
+    "mtime": 1794403518.187734,
+    "seen": 1794422756.5285885,
+    "ast_hash": "a94ef5f3e908c4a7431c80e10d95a5b0",
+    "semantic_hash": "a94ef5f3e908c4a7431c80e10d95a5b0"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/003_opportunity_management.sql": {
+    "mtime": 1794403518.2044165,
+    "seen": 1794422756.530898,
+    "ast_hash": "2ce4e43dd517f7e332304d80f93991a1",
+    "semantic_hash": "2ce4e43dd517f7e332304d80f93991a1"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/004_student_management.sql": {
+    "mtime": 1794403518.2044165,
+    "seen": 1794422756.530898,
+    "ast_hash": "2c4df317e3eaa8c0fd5e9b6dd2a2d2ce",
+    "semantic_hash": "2c4df317e3eaa8c0fd5e9b6dd2a2d2ce"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/005_admin_roles.sql": {
+    "mtime": 1794403518.2210684,
+    "seen": 1794422756.530898,
+    "ast_hash": "902b76479586567485f386ba688b878a",
+    "semantic_hash": "902b76479586567485f386ba688b878a"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/006_company_api.sql": {
+    "mtime": 1794403518.2384098,
+    "seen": 1794422756.530898,
+    "ast_hash": "570054eb80a59cf26052232e935a3af2",
+    "semantic_hash": "570054eb80a59cf26052232e935a3af2"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/007_realtime.sql": {
+    "mtime": 1794403518.2596493,
+    "seen": 1794422756.530898,
+    "ast_hash": "9b210f320e0d3e51bcbb821133b3bbad",
+    "semantic_hash": "9b210f320e0d3e51bcbb821133b3bbad"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/008_rls_policies.sql": {
+    "mtime": 1794403518.271226,
+    "seen": 1794422756.5334105,
+    "ast_hash": "560319d77da0d7d8bbbd7246645c79d3",
+    "semantic_hash": "560319d77da0d7d8bbbd7246645c79d3"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/009_database_functions.sql": {
+    "mtime": 1794403518.287771,
+    "seen": 1794422756.5334105,
+    "ast_hash": "ec6e9657edb642a0782517d1b9fb4aab",
+    "semantic_hash": "ec6e9657edb642a0782517d1b9fb4aab"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/migrations/010_database_triggers.sql": {
+    "mtime": 1794403518.287771,
+    "seen": 1794422756.5334105,
+    "ast_hash": "650bcdbae66a6380ec196c33e14cd93b",
+    "semantic_hash": "650bcdbae66a6380ec196c33e14cd93b"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/demo_admins.sql": {
+    "mtime": 1794403518.3209937,
+    "seen": 1794422756.5349941,
+    "ast_hash": "c49e1ad8ec3b062bc1e2355bc7fb2768",
+    "semantic_hash": "c49e1ad8ec3b062bc1e2355bc7fb2768"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/demo_data.sql": {
+    "mtime": 1794403518.3378448,
+    "seen": 1794422756.5349941,
+    "ast_hash": "736ace54a0658f03829a8df6f8d78981",
+    "semantic_hash": "736ace54a0658f03829a8df6f8d78981"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/demo_users.sql": {
+    "mtime": 1794403518.3556337,
+    "seen": 1794422756.5360682,
+    "ast_hash": "cf728d971c6924c26c67ac0a6731602f",
+    "semantic_hash": "cf728d971c6924c26c67ac0a6731602f"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/remove_demo_admins.sql": {
+    "mtime": 1794403518.3811915,
+    "seen": 1794422756.5360682,
+    "ast_hash": "94efd1d1cabd5504feae2e4bde577ada",
+    "semantic_hash": "94efd1d1cabd5504feae2e4bde577ada"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/remove_demo_data.sql": {
+    "mtime": 1794403518.3927205,
+    "seen": 1794422756.5360682,
+    "ast_hash": "9bbbcd19426d449dc9f3e61721453598",
+    "semantic_hash": "9bbbcd19426d449dc9f3e61721453598"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/remove_demo_users.sql": {
+    "mtime": 1794403518.4050863,
+    "seen": 1794422756.5380812,
+    "ast_hash": "d94c07c30ca133c39630adb552fd0a5e",
+    "semantic_hash": "d94c07c30ca133c39630adb552fd0a5e"
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/tests/verify_setup.sql": {
+    "mtime": 1794403518.421103,
+    "seen": 1794422756.5380812,
+    "ast_hash": "59e7bd2e74425ecac57d066f3f4ffde0",
+    "semantic_hash": "59e7bd2e74425ecac57d066f3f4ffde0"
+  },
+  "APP/FRONTEND/app.json": {
+    "mtime": 1794229153.7501328,
+    "seen": 1794422756.5380812,
+    "ast_hash": "9340e93a5b0af5cab8b77e781d9a869f",
+    "semantic_hash": "9340e93a5b0af5cab8b77e781d9a869f"
+  },
+  "APP/FRONTEND/assets/expo.icon/icon.json": {
+    "mtime": 1794154691.8031774,
+    "seen": 1794422756.5380812,
+    "ast_hash": "35cb915a0bebbebbe69cf7815e174462",
+    "semantic_hash": "35cb915a0bebbebbe69cf7815e174462",
+    "ast_empty": true
+  },
+  "APP/FRONTEND/eas.json": {
+    "mtime": 1794228361.469693,
+    "seen": 1794422756.5380812,
+    "ast_hash": "3bee997038a99aea21b44cfcad775dec",
+    "semantic_hash": "3bee997038a99aea21b44cfcad775dec",
+    "ast_empty": true
+  },
+  "APP/FRONTEND/package.json": {
+    "mtime": 1794403518.4768362,
+    "seen": 1794422756.5380812,
+    "ast_hash": "47325e818d0811809ca9769bde00958c",
+    "semantic_hash": "47325e818d0811809ca9769bde00958c"
+  },
+  "APP/FRONTEND/src/app/(tabs)/_layout.tsx": {
+    "mtime": 1794185692.5702446,
+    "seen": 1794422756.540096,
+    "ast_hash": "4088fd8e769e6c1a4835c6a74a1aa739",
+    "semantic_hash": "4088fd8e769e6c1a4835c6a74a1aa739"
+  },
+  "APP/FRONTEND/src/app/(tabs)/alerts.tsx": {
+    "mtime": 1794403518.482132,
+    "seen": 1794422756.540096,
+    "ast_hash": "20d3264e569001c9c3a14688d4e78660",
+    "semantic_hash": "20d3264e569001c9c3a14688d4e78660"
+  },
+  "APP/FRONTEND/src/app/(tabs)/explore.tsx": {
+    "mtime": 1794403518.4872878,
+    "seen": 1794422756.540096,
+    "ast_hash": "92c2c5d1c772581f3be0bb63e668ac8d",
+    "semantic_hash": "92c2c5d1c772581f3be0bb63e668ac8d"
+  },
+  "APP/FRONTEND/src/app/(tabs)/home.tsx": {
+    "mtime": 1794403518.487679,
+    "seen": 1794422756.540096,
+    "ast_hash": "283476c6221ab8c334b4c32c0486bf11",
+    "semantic_hash": "283476c6221ab8c334b4c32c0486bf11"
+  },
+  "APP/FRONTEND/src/app/(tabs)/profile.tsx": {
+    "mtime": 1794403518.4931898,
+    "seen": 1794422756.5421093,
+    "ast_hash": "2213416dbaedc883652ee5d0d7cde0dc",
+    "semantic_hash": "2213416dbaedc883652ee5d0d7cde0dc"
+  },
+  "APP/FRONTEND/src/app/(tabs)/saved.tsx": {
+    "mtime": 1794403518.498278,
+    "seen": 1794422756.5421093,
+    "ast_hash": "7951414bae98c7deab0acee5c0c8c1e2",
+    "semantic_hash": "7951414bae98c7deab0acee5c0c8c1e2"
+  },
+  "APP/FRONTEND/src/app/_layout.tsx": {
+    "mtime": 1794185635.6302412,
+    "seen": 1794422756.5421093,
+    "ast_hash": "a5c105cef263f0488b69baa44374effa",
+    "semantic_hash": "a5c105cef263f0488b69baa44374effa"
+  },
+  "APP/FRONTEND/src/app/admin.tsx": {
+    "mtime": 1794403518.498278,
+    "seen": 1794422756.5421093,
+    "ast_hash": "093c122f3f743881a34b7c699a4789c5",
+    "semantic_hash": "093c122f3f743881a34b7c699a4789c5"
+  },
+  "APP/FRONTEND/src/app/applications.tsx": {
+    "mtime": 1794403518.5043263,
+    "seen": 1794422756.5441256,
+    "ast_hash": "eaa299871b3b56893befad47b73bd7e4",
+    "semantic_hash": "eaa299871b3b56893befad47b73bd7e4"
+  },
+  "APP/FRONTEND/src/app/auth.tsx": {
+    "mtime": 1794403518.5211058,
+    "seen": 1794422756.5441256,
+    "ast_hash": "2d26edce31c188fb90c33c58382e41e8",
+    "semantic_hash": "2d26edce31c188fb90c33c58382e41e8"
+  },
+  "APP/FRONTEND/src/app/filters.tsx": {
+    "mtime": 1794186153.1467426,
+    "seen": 1794422756.5441256,
+    "ast_hash": "2f2d8800e758b9b781c07c8b44b452e7",
+    "semantic_hash": "2f2d8800e758b9b781c07c8b44b452e7"
+  },
+  "APP/FRONTEND/src/app/index.tsx": {
+    "mtime": 1794403518.5211058,
+    "seen": 1794422756.5461504,
+    "ast_hash": "ccb30649d63d3867bdd7c7ac99526ed2",
+    "semantic_hash": "ccb30649d63d3867bdd7c7ac99526ed2"
+  },
+  "APP/FRONTEND/src/app/matches.tsx": {
+    "mtime": 1794403518.5211058,
+    "seen": 1794422756.5461504,
+    "ast_hash": "e004d18a1c6d6e58a7c4769c7676e959",
+    "semantic_hash": "e004d18a1c6d6e58a7c4769c7676e959"
+  },
+  "APP/FRONTEND/src/app/opportunity/[id].tsx": {
+    "mtime": 1794403518.5366483,
+    "seen": 1794422756.5461504,
+    "ast_hash": "eb491e5f3a13cbea8a3b2bb2d33399ec",
+    "semantic_hash": "eb491e5f3a13cbea8a3b2bb2d33399ec"
+  },
+  "APP/FRONTEND/src/app/search.tsx": {
+    "mtime": 1794403518.537634,
+    "seen": 1794422756.5461504,
+    "ast_hash": "d2617469f9ec2bf53b5664a584f55f17",
+    "semantic_hash": "d2617469f9ec2bf53b5664a584f55f17"
+  },
+  "APP/FRONTEND/src/app/settings.tsx": {
+    "mtime": 1794403518.537634,
+    "seen": 1794422756.548175,
+    "ast_hash": "6c6be8293849e8d8d789fcde2506f410",
+    "semantic_hash": "6c6be8293849e8d8d789fcde2506f410"
+  },
+  "APP/FRONTEND/src/components/AppHeader.tsx": {
+    "mtime": 1794155808.7656634,
+    "seen": 1794422756.548175,
+    "ast_hash": "c5972ef500e9fa16e40ecf671a07dcff",
+    "semantic_hash": "c5972ef500e9fa16e40ecf671a07dcff"
+  },
+  "APP/FRONTEND/src/components/BottomNav.tsx": {
+    "mtime": 1794186368.4717615,
+    "seen": 1794422756.548175,
+    "ast_hash": "3d483f081a06e275671c2396ab90c033",
+    "semantic_hash": "3d483f081a06e275671c2396ab90c033"
+  },
+  "APP/FRONTEND/src/components/Brand.tsx": {
+    "mtime": 1794155807.2397738,
+    "seen": 1794422756.548175,
+    "ast_hash": "eae4c1320f46b78775fb3bb4550dc7b1",
+    "semantic_hash": "eae4c1320f46b78775fb3bb4550dc7b1"
+  },
+  "APP/FRONTEND/src/components/Button.tsx": {
+    "mtime": 1794155822.5261571,
+    "seen": 1794422756.5501883,
+    "ast_hash": "4cf659802368c47e2375a3a6dfeef81f",
+    "semantic_hash": "4cf659802368c47e2375a3a6dfeef81f"
+  },
+  "APP/FRONTEND/src/components/Chip.tsx": {
+    "mtime": 1794155823.0676098,
+    "seen": 1794422756.5501883,
+    "ast_hash": "44af96257c36b7c5a25558b47ba58359",
+    "semantic_hash": "44af96257c36b7c5a25558b47ba58359"
+  },
+  "APP/FRONTEND/src/components/EmptyState.tsx": {
+    "mtime": 1794155832.8143241,
+    "seen": 1794422756.5501883,
+    "ast_hash": "bc5892d0d3a3353c150bbb9065eb1463",
+    "semantic_hash": "bc5892d0d3a3353c150bbb9065eb1463"
+  },
+  "APP/FRONTEND/src/components/FormField.tsx": {
+    "mtime": 1794155823.713964,
+    "seen": 1794422756.5501883,
+    "ast_hash": "1a10ac63023a39460665fa8ea53831c0",
+    "semantic_hash": "1a10ac63023a39460665fa8ea53831c0"
+  },
+  "APP/FRONTEND/src/components/OpportunityCard.tsx": {
+    "mtime": 1794155842.554094,
+    "seen": 1794422756.5521996,
+    "ast_hash": "21cc9b8226d1591237e7f4628021b15e",
+    "semantic_hash": "21cc9b8226d1591237e7f4628021b15e"
+  },
+  "APP/FRONTEND/src/components/Screen.tsx": {
+    "mtime": 1794155807.9281137,
+    "seen": 1794422756.5521996,
+    "ast_hash": "4dc862beaca0751c374ecd59b5c7fb6b",
+    "semantic_hash": "4dc862beaca0751c374ecd59b5c7fb6b"
+  },
+  "APP/FRONTEND/src/components/SectionHeader.tsx": {
+    "mtime": 1794155832.678713,
+    "seen": 1794422756.5521996,
+    "ast_hash": "932528bd2cd7cb85c4dc07585999ba5b",
+    "semantic_hash": "932528bd2cd7cb85c4dc07585999ba5b"
+  },
+  "APP/FRONTEND/src/components/StatCard.tsx": {
+    "mtime": 1794155852.8399851,
+    "seen": 1794422756.5521996,
+    "ast_hash": "d8050de50c328d52571c4b5e79287013",
+    "semantic_hash": "d8050de50c328d52571c4b5e79287013"
+  },
+  "APP/FRONTEND/src/components/ToastHost.tsx": {
+    "mtime": 1794155853.0662353,
+    "seen": 1794422756.554211,
+    "ast_hash": "87e41956c9df5432b97a48f9ce17f022",
+    "semantic_hash": "87e41956c9df5432b97a48f9ce17f022"
+  },
+  "APP/FRONTEND/src/components/Toggle.tsx": {
+    "mtime": 1794155832.3996854,
+    "seen": 1794422756.554211,
+    "ast_hash": "1b84911c98ae408f606c1ba29d518673",
+    "semantic_hash": "1b84911c98ae408f606c1ba29d518673"
+  },
+  "APP/FRONTEND/src/constants/theme.ts": {
+    "mtime": 1794155656.241146,
+    "seen": 1794422756.554211,
+    "ast_hash": "d6d7fdd3356ec16f41c09c05fad1af95",
+    "semantic_hash": "d6d7fdd3356ec16f41c09c05fad1af95"
+  },
+  "APP/FRONTEND/src/data/admin.ts": {
+    "mtime": 1794155737.3069441,
+    "seen": 1794422756.554211,
+    "ast_hash": "0276bb2aae78ea1e4ff154cda9aa359e",
+    "semantic_hash": "0276bb2aae78ea1e4ff154cda9aa359e"
+  },
+  "APP/FRONTEND/src/data/applications.ts": {
+    "mtime": 1794155726.0125232,
+    "seen": 1794422756.556223,
+    "ast_hash": "aaea2aa60ae534b3144a740ffc5b5afe",
+    "semantic_hash": "aaea2aa60ae534b3144a740ffc5b5afe"
+  },
+  "APP/FRONTEND/src/data/notifications.ts": {
+    "mtime": 1794185808.0576365,
+    "seen": 1794422756.556223,
+    "ast_hash": "e194f6f2e50e71bead627744ed7bf219",
+    "semantic_hash": "e194f6f2e50e71bead627744ed7bf219"
+  },
+  "APP/FRONTEND/src/data/opportunities.ts": {
+    "mtime": 1794186289.4625006,
+    "seen": 1794422756.556223,
+    "ast_hash": "0f244dddb6d19be8ba7eaaf20f7b84b5",
+    "semantic_hash": "0f244dddb6d19be8ba7eaaf20f7b84b5"
+  },
+  "APP/FRONTEND/src/data/profile.ts": {
+    "mtime": 1794155716.2020924,
+    "seen": 1794422756.556223,
+    "ast_hash": "6816102f72d0b0f5835978a6fe7b7569",
+    "semantic_hash": "6816102f72d0b0f5835978a6fe7b7569"
+  },
+  "APP/FRONTEND/src/services/adminService.ts": {
+    "mtime": 1794403518.537634,
+    "seen": 1794422756.5582342,
+    "ast_hash": "f7a9d5117f276950be4e568abaf60cb8",
+    "semantic_hash": "f7a9d5117f276950be4e568abaf60cb8"
+  },
+  "APP/FRONTEND/src/services/applicationService.ts": {
+    "mtime": 1794403518.537634,
+    "seen": 1794422756.5582342,
+    "ast_hash": "310a9002521356e678d405464215e020",
+    "semantic_hash": "310a9002521356e678d405464215e020"
+  },
+  "APP/FRONTEND/src/services/notificationService.ts": {
+    "mtime": 1794403518.537634,
+    "seen": 1794422756.5582342,
+    "ast_hash": "0ea472f4abe38e77469b68442c994629",
+    "semantic_hash": "0ea472f4abe38e77469b68442c994629"
+  },
+  "APP/FRONTEND/src/services/opportunityService.ts": {
+    "mtime": 1794403518.5531075,
+    "seen": 1794422756.5582342,
+    "ast_hash": "6f5615f79989770e604a83c9edef48e4",
+    "semantic_hash": "6f5615f79989770e604a83c9edef48e4"
+  },
+  "APP/FRONTEND/src/services/profileService.ts": {
+    "mtime": 1794403518.554295,
+    "seen": 1794422756.5599885,
+    "ast_hash": "0713f0678d91df32cf5722491f5f33e5",
+    "semantic_hash": "0713f0678d91df32cf5722491f5f33e5"
+  },
+  "APP/FRONTEND/src/services/simulate.ts": {
+    "mtime": 1794155746.687925,
+    "seen": 1794422756.5599885,
+    "ast_hash": "d4234bd1836ccb28dbb0175cd8d34059",
+    "semantic_hash": "d4234bd1836ccb28dbb0175cd8d34059"
+  },
+  "APP/FRONTEND/src/state/AppProvider.tsx": {
+    "mtime": 1794403518.5713084,
+    "seen": 1794422756.5599885,
+    "ast_hash": "97848abdb912cb90d0d313da5bdc8303",
+    "semantic_hash": "97848abdb912cb90d0d313da5bdc8303"
+  },
+  "APP/FRONTEND/src/types/index.ts": {
+    "mtime": 1794403518.575939,
+    "seen": 1794422756.5620024,
+    "ast_hash": "61627a9947a12381d6e3e467fa397bd1",
+    "semantic_hash": "61627a9947a12381d6e3e467fa397bd1"
+  },
+  "APP/FRONTEND/src/utils/date.ts": {
+    "mtime": 1794155676.5575812,
+    "seen": 1794422756.5620024,
+    "ast_hash": "d20b0087c1343a7e89955f0f3da458f9",
+    "semantic_hash": "d20b0087c1343a7e89955f0f3da458f9"
+  },
+  "APP/FRONTEND/src/utils/format.ts": {
+    "mtime": 1794155683.344388,
+    "seen": 1794422756.5620024,
+    "ast_hash": "63ea9723881069cfaea16555a345da03",
+    "semantic_hash": "63ea9723881069cfaea16555a345da03"
+  },
+  "APP/FRONTEND/tsconfig.json": {
+    "mtime": 1794154691.903853,
+    "seen": 1794422756.5620024,
+    "ast_hash": "6794be22dd9dd00003515895d3b4ff06",
+    "semantic_hash": "6794be22dd9dd00003515895d3b4ff06"
+  },
+  "APP/Database/AgriOpportunity_Database/AgriOpportunity_Database/README.md": {
+    "mtime": 1794403518.0876102,
+    "seen": 1794477455.440127,
+    "ast_hash": "b3152d66a83c5cb0aedf9e7fa734a568",
+    "semantic_hash": ""
+  },
+  "APP/Database/AgriOpportunity_Supabase/README.md": {
+    "mtime": 1794403518.159765,
+    "seen": 1794477455.440127,
+    "ast_hash": "ed68d53205e9d3eed2b66da201584b7c",
+    "semantic_hash": ""
+  },
+  "APP/Database/AgriOpportunity_Supabase/supabase/seed/DEMO_LOGINS.md": {
+    "mtime": 1794403518.316302,
+    "seen": 1794477455.440127,
+    "ast_hash": "ab8853c9f08705c0bdfda8966a6b4641",
+    "semantic_hash": ""
+  },
+  "APP/Database/run_document.txt": {
+    "mtime": 1794403518.445782,
+    "seen": 1794477455.440127,
+    "ast_hash": "120e7c8cf8373edbdaf1e52eb4d2d0c6",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/MASTER_PROMPT.md": {
+    "mtime": 1794151693.867021,
+    "seen": 1794477455.440127,
+    "ast_hash": "8cb561a1f9343da7cb0a3c0147b3bc16",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/expo.icon/Assets/expo-symbol 2.svg": {
+    "mtime": 1794154691.7943406,
+    "seen": 1794477455.440127,
+    "ast_hash": "6979b664c1ce82c10426a051082412a7",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/expo.icon/Assets/grid.png": {
+    "mtime": 1794154691.7991495,
+    "seen": 1794477455.440127,
+    "ast_hash": "37cdeda9d1af5d7432716d9671b098da",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/android-icon-background.png": {
+    "mtime": 1794154691.8051963,
+    "seen": 1794477455.440127,
+    "ast_hash": "2d65569cc0e2afdcea0af9f9902d4173",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/android-icon-foreground.png": {
+    "mtime": 1794154691.8051963,
+    "seen": 1794477455.440127,
+    "ast_hash": "72e71a9c846c6aa4ae32476641a00e18",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/android-icon-monochrome.png": {
+    "mtime": 1794154691.8096058,
+    "seen": 1794477455.440127,
+    "ast_hash": "1e097dab989759fc0b69440092ca22cd",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/expo-badge-white.png": {
+    "mtime": 1794154691.811951,
+    "seen": 1794477455.440127,
+    "ast_hash": "02efb8472f161bcf8afc8c8489a28fca",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/expo-badge.png": {
+    "mtime": 1794154691.813543,
+    "seen": 1794477455.440127,
+    "ast_hash": "6b0da8ec880685d1bd053c0f5ea9d09d",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/expo-logo.png": {
+    "mtime": 1794154691.813543,
+    "seen": 1794477455.440127,
+    "ast_hash": "5ee5db91d59518c45ebcc99a2f5afc57",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/favicon.png": {
+    "mtime": 1794154691.8182218,
+    "seen": 1794477455.440127,
+    "ast_hash": "d9f444efbdfbe7931aa93beada07318a",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/icon.png": {
+    "mtime": 1794154691.8308167,
+    "seen": 1794477455.440127,
+    "ast_hash": "8d892ef03dbd43e8d899c1d605ad42df",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/logo-glow.png": {
+    "mtime": 1794154691.8410778,
+    "seen": 1794477455.440127,
+    "ast_hash": "dbca075a49dc45e550c5d2e3e9601039",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/react-logo.png": {
+    "mtime": 1794154691.8410778,
+    "seen": 1794477455.440127,
+    "ast_hash": "695d5a1c6f29a689130f3aaa573aec6e",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/react-logo@2x.png": {
+    "mtime": 1794154691.8410778,
+    "seen": 1794477455.440127,
+    "ast_hash": "b507e7f2c91ebc8fe24dee79ccb3b600",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/react-logo@3x.png": {
+    "mtime": 1794154691.8410778,
+    "seen": 1794477455.440127,
+    "ast_hash": "8a4d0e5b845044e56e3b2df627d01cfd",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/splash-icon.png": {
+    "mtime": 1794154691.8502586,
+    "seen": 1794477455.440127,
+    "ast_hash": "5ee5db91d59518c45ebcc99a2f5afc57",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/explore.png": {
+    "mtime": 1794154691.8522687,
+    "seen": 1794477455.440127,
+    "ast_hash": "8409922f7d5c981001e3c9b25e4bfae5",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/explore@2x.png": {
+    "mtime": 1794154691.8538532,
+    "seen": 1794477455.440127,
+    "ast_hash": "dd40200ba8e8d98061578292d6b73791",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/explore@3x.png": {
+    "mtime": 1794154691.8538532,
+    "seen": 1794477455.440127,
+    "ast_hash": "c4278d79298bb11a8b0e68ed3e40da9e",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/home.png": {
+    "mtime": 1794154691.8568056,
+    "seen": 1794477455.440127,
+    "ast_hash": "eeb5de2ac12ace75b31dfda235208956",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/home@2x.png": {
+    "mtime": 1794154691.8568056,
+    "seen": 1794477455.440127,
+    "ast_hash": "456346cfb0b82cc0f39e921e05d082d9",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tabIcons/home@3x.png": {
+    "mtime": 1794154691.8568056,
+    "seen": 1794477455.440127,
+    "ast_hash": "5d86e963002b3664ab81c128c838559d",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/assets/images/tutorial-web.png": {
+    "mtime": 1794154691.8568056,
+    "seen": 1794477455.440127,
+    "ast_hash": "c62d22797f3002396754d8cc55b0ae1a",
+    "semantic_hash": ""
+  },
+  "APP/FRONTEND/package-lock.json": {
+    "mtime": 1794403518.4652903,
+    "seen": 1794477455.440127,
+    "ast_hash": "98fee978c6a21f7c5bf9336914154d68",
+    "semantic_hash": ""
+  }
+}

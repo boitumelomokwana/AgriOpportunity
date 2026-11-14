@@ -52,7 +52,7 @@ create table if not exists public.system_settings (
 );
 
 insert into public.system_settings (key, value, description, is_public) values
-  ('platform_name',                  '"AgriOpportunity"'::jsonb, 'Display name of the platform', true),
+  ('platform_name',                  '"AgriOpportunities"'::jsonb, 'Display name of the platform', true),
   ('api_rate_limit_per_minute',      '60'::jsonb,   'Default requests per minute for each company API key', false),
   ('api_max_payload_kb',             '256'::jsonb,  'Maximum request body size accepted by the company API', false),
   ('review_required_on_change',      'true'::jsonb, 'Return approved/published external opportunities to review when material fields change', false),

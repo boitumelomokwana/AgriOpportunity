@@ -5,7 +5,7 @@ export const mockApplications: ApplicationRecord[] = [
   {
     id: 'a1',
     opportunityId: '1',
-    status: 'Preparing',
+    status: 'Interested',
     updatedAt: formatShortDate(daysFromNow(-3)),
     source: 'user',
   },

@@ -11,8 +11,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { OpportunityCard } from '@/components/OpportunityCard';
 import { SectionHeader } from '@/components/SectionHeader';
 import { StatCard } from '@/components/StatCard';
+import { categoryChips } from '@/constants/categories';
 import { colors, fonts, radius, shadows, spacing, type } from '@/constants/theme';
-import { opportunityCategories } from '@/data/opportunities';
 import {
   defaultFilters,
   getMatchingOpportunities,
@@ -20,7 +20,6 @@ import {
 } from '@/services/opportunityService';
 import { useApp } from '@/state/AppProvider';
 import { formatLongDate } from '@/utils/date';
-import { chipToCategory } from '@/utils/format';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -52,12 +51,11 @@ export default function HomeScreen() {
 
   const firstName = profile.name.split(' ')[0];
   const activeApplications = applications.filter(
-    (application) => application.status !== 'Outcome',
+    (application) =>
+      application.status !== 'Rejected' && application.status !== 'Withdrawn',
   ).length;
 
-  const openExplore = (label: string) => {
-    const category = chipToCategory(label);
-    if (!category) return;
+  const openExplore = (category: (typeof categoryChips)[number]['category']) => {
     setExploreFilters({ ...defaultFilters, types: [category] });
     router.push('/explore');
   };
@@ -130,18 +128,23 @@ export default function HomeScreen() {
           contentContainerStyle={styles.categoryRow}
           style={styles.categoryScroll}
         >
-          {opportunityCategories.map((category) => (
+          {categoryChips.map((category) => (
             <Chip
               key={category.category}
               label={category.label}
               icon={category.icon}
-              onPress={() => openExplore(category.label)}
+              onPress={() => openExplore(category.category)}
             />
           ))}
         </ScrollView>
 
         <View style={styles.statRow}>
-          <StatCard label="Open now" value={opportunities.length} icon="zap" tone="green" />
+          <StatCard
+            label="Open now"
+            value={opportunities.filter((item) => !item.isExpired).length}
+            icon="zap"
+            tone="green"
+          />
           <StatCard label="Saved" value={savedIds.length} icon="bookmark" tone="blue" />
           <StatCard label="Tracking" value={activeApplications} icon="clipboard" tone="amber" />
         </View>
@@ -202,7 +205,7 @@ export default function HomeScreen() {
 
         <SectionHeader
           title="Your progress"
-          subtitle="Kept on this device for the demo"
+          subtitle="Synced to your account"
         />
         <View style={styles.linkList}>
           <Pressable
@@ -234,6 +237,20 @@ export default function HomeScreen() {
               <Text style={styles.linkBody}>
                 {savedIds.length} saved for later
               </Text>
+            </View>
+            <Feather name="chevron-right" size={19} color={colors.muted} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/deadlines')}
+            style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+          >
+            <View style={[styles.linkIcon, styles.linkIconTeal]}>
+              <Feather name="clock" size={17} color={colors.teal700} />
+            </View>
+            <View style={styles.linkCopy}>
+              <Text style={styles.linkTitle}>Upcoming deadlines</Text>
+              <Text style={styles.linkBody}>Closing dates from your saved list</Text>
             </View>
             <Feather name="chevron-right" size={19} color={colors.muted} />
           </Pressable>

@@ -12,7 +12,7 @@ export function Brand({ compact = false }: { compact?: boolean }) {
       </View>
       {!compact && (
         <View>
-          <Text style={styles.name}>NextStep</Text>
+          <Text style={styles.name}>AgriOpportunities</Text>
           <Text style={styles.country}>SOUTH AFRICA</Text>
         </View>
       )}

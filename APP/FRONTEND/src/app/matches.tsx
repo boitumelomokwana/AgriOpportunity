@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -13,7 +13,7 @@ import { useApp } from '@/state/AppProvider';
 
 export default function MatchesScreen() {
   const router = useRouter();
-  const { opportunities, profile, isSaved, toggleSaved } = useApp();
+  const { opportunities, profile, isSaved, toggleSaved, isSignedIn } = useApp();
 
   const matches = useMemo(() => getMatchingOpportunities(opportunities), [opportunities]);
 
@@ -21,17 +21,21 @@ export default function MatchesScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safe}>
       <AppHeader
         title="Matches"
-        subtitle={`Illustrative match scores for ${profile.name.split(' ')[0]}`}
+        subtitle={
+          isSignedIn
+            ? `Scored against ${profile.name.split(' ')[0]}'s interests, field and province`
+            : 'Sign in to see your personal matches'
+        }
         onBack={() => router.back()}
       />
 
       <View style={styles.explainerCard}>
         <Feather name="target" size={17} color={colors.teal700} />
         <Text style={styles.explainerText}>
-          Match scores are generated illustratively for the demo and compare
-          the listing field, education level and province with your profile.
-          Scores are not real predictions — always read the official
-          requirements before applying.
+          Match scores are transparent: 35 points for an interest match, 25 for
+          your field of study, 20 for your province or remote work, 10 for
+          education level and 10 for still being open. Every score explains
+          itself on the opportunity page.
         </Text>
       </View>
 
@@ -39,14 +43,23 @@ export default function MatchesScreen() {
         <View style={styles.emptyWrap}>
           <EmptyState
             icon="target"
-            title="No matches yet"
-            message="Fill in more of your profile, or browse all open opportunities."
-            actionLabel="Explore opportunities"
-            onAction={() => router.push('/explore')}
+            title={isSignedIn ? 'No matches yet' : 'Sign in to see matches'}
+            message={
+              isSignedIn
+                ? 'Add more interests, your field of study and province, or browse all open opportunities.'
+                : 'Your profile drives the score. Create an account, add your interests, and matches will appear here.'
+            }
+            actionLabel={isSignedIn ? 'Explore opportunities' : 'Sign in'}
+            onAction={() =>
+              router.push(isSignedIn ? '/explore' : '/auth')
+            }
           />
         </View>
       ) : (
-        <View style={styles.list}>
+        <ScrollView
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        >
           {matches.map((opportunity) => (
             <OpportunityCard
               key={opportunity.id}
@@ -56,7 +69,7 @@ export default function MatchesScreen() {
               onOpen={() => router.push(`/opportunity/${opportunity.id}`)}
             />
           ))}
-        </View>
+        </ScrollView>
       )}
     </SafeAreaView>
   );
